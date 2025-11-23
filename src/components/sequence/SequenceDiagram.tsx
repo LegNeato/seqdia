@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, GitCompare, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, GitCompare } from "lucide-react";
 
 import {
   SequenceProvider,
@@ -484,10 +484,7 @@ export function ActorAnchor({
         {renderActorLabel ? (
           renderActorLabel(actor)
         ) : (
-          <>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate">{actor.label}</span>
-          </>
+          <span className="truncate text-sm font-semibold">{actor.label}</span>
         )}
         {hasChild &&
           (collapsed ? (
