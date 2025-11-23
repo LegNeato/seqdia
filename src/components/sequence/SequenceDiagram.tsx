@@ -1,25 +1,20 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, GitCompare, ArrowRight } from "lucide-react";
+import { useMemo } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import {
   SequenceProvider,
   useSequenceContext,
 } from "@/components/sequence/SequenceProvider";
-import { useSequenceApi } from "@/hooks/useSequenceApi";
-import {
-  type SequenceController,
-  type SequenceControllerApi,
-} from "@/hooks/useSequenceController";
-import { computeLayout, type SequenceLayout } from "@/lib/sequence/layout";
-import { cn } from "@/lib/utils";
+import type { SequenceController } from "@/hooks/useSequenceController";
+import { computeLayout, type VisibleActor } from "@/lib/sequence/layout";
 import type {
-  Sequence,
-  SequenceActor,
+  SequenceDiagramModel,
+  ActorNode,
   SequenceMessage,
 } from "@/lib/sequence/types";
-import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -27,684 +22,434 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { Separator } from "../ui/separator";
 
-type ViewSequence = Sequence & { actors: SequenceActor[]; messages: SequenceMessage[] };
+const COLUMN_WIDTH = 140;
+function softColor(color: string, lightness: number) {
+  const match = /hsl\(\s*([-\d.]+)\s+([-\d.]+)%\s+([-\d.]+)%/.exec(color);
+  if (!match) return color;
+  const [, h, s] = match;
+  const safeLightness = Math.min(Math.max(lightness, 0), 100);
+  const safeSat = Math.min(Math.max(parseFloat(s), 0), 100);
+  return `hsl(${parseFloat(h)} ${safeSat}% ${safeLightness}%)`;
+}
 
-type ExpandResult = {
-  sequence: ViewSequence;
-  entryId?: string;
-};
+function collectActorIds(nodes: ActorNode[]): string[] {
+  return nodes.flatMap((node) => [
+    node.actorId,
+    ...collectActorIds(node.children ?? []),
+  ]);
+}
 
-const ACTOR_COLORS = [
-  "hsl(221, 83%, 53%)",
-  "hsl(173, 58%, 39%)",
-  "hsl(43, 96%, 50%)",
-  "hsl(12, 83%, 58%)",
-  "hsl(280, 65%, 60%)",
-  "hsl(195, 74%, 52%)",
-  "hsl(140, 65%, 45%)",
-  "hsl(330, 70%, 55%)",
-];
-
-function expandSequenceView(
-  sequence: Sequence,
-  collapsedActors: Set<string>,
-  prefix = "",
-): ExpandResult {
-  const actors: SequenceActor[] = [];
-  const messages: SequenceMessage[] = [];
-  const actorIdMap: Record<string, string> = {};
-
-  sequence.actors.forEach((actor) => {
-    if (actor.embeddedSequence && !collapsedActors.has(actor.id)) {
-      const expanded = expandSequenceView(
-        actor.embeddedSequence,
-        collapsedActors,
-        `${prefix}${actor.id}.`,
-      );
-      const entryId =
-        expanded.sequence.actors[0]?.id ?? `${prefix}${actor.id}`;
-      actorIdMap[actor.id] = entryId;
-      expanded.sequence.actors.forEach((child) => {
-        actors.push({
-          ...child,
-          parentId: actor.id,
-          originId: child.originId ?? child.id,
-        });
-      });
-      expanded.sequence.messages.forEach((message) => {
-        messages.push({
-          ...message,
-          parentId: actor.id,
-          originId: message.originId ?? message.id,
-        });
-      });
-    } else {
-      const id = `${prefix}${actor.id}`;
-      actorIdMap[actor.id] = id;
-      actors.push({
-        ...actor,
-        id,
-        originId: actor.originId ?? actor.id,
-      });
-    }
-  });
-
-  sequence.messages.forEach((message) => {
-    const from = actorIdMap[message.from] ?? `${prefix}${message.from}`;
-    const to = actorIdMap[message.to] ?? `${prefix}${message.to}`;
-    messages.push({
-      ...message,
-      id: `${prefix}${message.id}`,
-      originId: message.originId ?? message.id,
-      from,
-      to,
-    });
-  });
-
-  return {
-    sequence: {
-      ...sequence,
-      actors,
-      messages,
-    },
-    entryId: actors[0]?.id,
-  };
+function hueFromId(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) % 360;
+  }
+  return (hash + 360) % 360;
 }
 
 type SequenceDiagramProps = {
-  sequence: Sequence;
+  model: SequenceDiagramModel;
   controller?: SequenceController;
-  height?: number;
   className?: string;
-  showLegend?: boolean;
-  onReady?: (api: SequenceControllerApi) => void;
-  renderActorLabel?: (actor: SequenceActor) => React.ReactNode;
-  renderMessageClass?: (
-    messageClass: string,
-    message: SequenceMessage,
-  ) => React.ReactNode;
-  renderMeta?: (
-    meta: Record<string, string | number>,
-    message: SequenceMessage,
-  ) => React.ReactNode;
+  renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
+  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
+  onActorClick?: (actorId: string) => void;
+  onMessageClick?: (messageId: string) => void;
 };
 
 export function SequenceDiagram({
-  sequence,
+  model,
   controller,
-  height = 520,
   className,
-  showLegend = true,
-  onReady,
   renderActorLabel,
-  renderMessageClass,
-  renderMeta,
+  renderMessageLabel,
+  onActorClick,
+  onMessageClick,
 }: SequenceDiagramProps) {
   return (
-    <SequenceProvider sequence={sequence} controller={controller}>
+    <SequenceProvider model={model} controller={controller}>
       <SequenceSurface
-        height={height}
         className={className}
-        showLegend={showLegend}
-        onReady={onReady}
         renderActorLabel={renderActorLabel}
-        renderMessageClass={renderMessageClass}
-        renderMeta={renderMeta}
+        renderMessageLabel={renderMessageLabel}
+        onActorClick={onActorClick}
+        onMessageClick={onMessageClick}
       />
     </SequenceProvider>
   );
 }
 
 type SurfaceProps = {
-  height: number;
-  showLegend: boolean;
-  onReady?: (api: SequenceControllerApi) => void;
   className?: string;
-  renderActorLabel?: (actor: SequenceActor) => ReactNode;
-  renderMessageClass?: (
-    messageClass: string,
-    message: SequenceMessage,
-  ) => ReactNode;
-  renderMeta?: (
-    meta: Record<string, string | number>,
-    message: SequenceMessage,
-  ) => ReactNode;
+  renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
+  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
+  onActorClick?: (actorId: string) => void;
+  onMessageClick?: (messageId: string) => void;
 };
 
 function SequenceSurface({
-  height,
-  showLegend,
-  onReady,
   className,
   renderActorLabel,
-  renderMessageClass,
-  renderMeta,
+  renderMessageLabel,
+  onActorClick,
+  onMessageClick,
 }: SurfaceProps) {
-  const { sequence, controller } = useSequenceContext();
-  useSequenceApi(onReady);
-  const viewSequence = useMemo(
-    () => expandSequenceView(sequence, controller.state.collapsedActors).sequence,
-    [controller.state.collapsedActors, sequence],
-  );
-  const actorIndexMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    viewSequence.actors.forEach((actor, index) => {
-      map[actor.id] = index;
-    });
-    return map;
-  }, [viewSequence.actors]);
-  const actorCount = viewSequence.actors.length || 1;
-  const columnTemplate = useMemo(
-    () => `repeat(${actorCount}, minmax(180px, 1fr))`,
-    [actorCount],
-  );
-  const actorColors = useMemo(() => {
-    const originOrder = new Map<string, number>();
-    const colorMap: Record<string, string> = {};
-    viewSequence.actors.forEach((actor) => {
-      const key = actor.originId ?? actor.id;
-      if (!originOrder.has(key)) {
-        originOrder.set(key, originOrder.size);
-      }
-      const idx = originOrder.get(key) ?? 0;
-      colorMap[actor.id] = ACTOR_COLORS[idx % ACTOR_COLORS.length];
-    });
-    return colorMap;
-  }, [viewSequence.actors]);
+  const { model, controller } = useSequenceContext();
+
   const layout = useMemo(
-    () => computeLayout(viewSequence, { height }),
-    [height, viewSequence],
-  );
-  const messageY = useMemo(() => {
-    const map: Record<string, number> = {};
-    Object.entries(layout.messagePositions).forEach(([id, pos]) => {
-      map[id] = pos.y;
-    });
-    return map;
-  }, [layout.messagePositions]);
-
-  const uniqueMessageClasses = useMemo(
     () =>
-      Array.from(
-        new Set(
-          viewSequence.messages
-            .map((message) => message.messageClass)
-            .filter(Boolean) as string[],
-        ),
-      ),
-    [viewSequence.messages],
+      computeLayout(model, {
+        expandedActorIds: controller.state.expandedActors,
+      }),
+    [controller.state.expandedActors, model],
   );
 
-  const messageClassSamples = useMemo(() => {
-    const map: Record<string, SequenceMessage | undefined> = {};
-    viewSequence.messages.forEach((message) => {
-      if (message.messageClass && !map[message.messageClass]) {
-        map[message.messageClass] = message;
-      }
+  const gridTemplate = useMemo(
+    () => `repeat(${layout.leafCount}, ${COLUMN_WIDTH}px)`,
+    [layout.leafCount],
+  );
+  const minWidth = layout.leafCount * COLUMN_WIDTH;
+  const actorColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    const ids = Array.from(new Set(collectActorIds(model.actors)));
+    ids.forEach((id, idx) => {
+      const hue = (hueFromId(id) + idx * 5) % 360;
+      map[id] = `hsl(${hue.toFixed(1)} 72% 52%)`;
     });
     return map;
-  }, [viewSequence.messages]);
-
-  const sequenceStyle = controller.state.styles.sequences[sequence.id];
-  const sequenceHighlighted = controller.state.highlight.sequences.has(
-    sequence.id,
-  );
+  }, [model.actors]);
+  const actorBackgrounds = useMemo(() => {
+    const map: Record<string, string> = {};
+    Object.entries(actorColors).forEach(([id, color]) => {
+      map[id] = softColor(color, 94);
+    });
+    return map;
+  }, [actorColors]);
 
   return (
-    <Card
-      className={cn(
-        "space-y-2 border-border/80",
-        sequenceStyle,
-        sequenceHighlighted && "ring-2 ring-primary/50 ring-offset-1",
-        className,
-      )}
-      data-sequence-id={sequence.id}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <GitCompare className="h-4 w-4 text-primary" />
-              {sequence.label ?? "Sequence"}
-            </CardTitle>
-            {sequence.description && (
-              <CardDescription>{sequence.description}</CardDescription>
-            )}
-          </div>
-          {showLegend && (
-            <SequenceLegend
-              messageClasses={uniqueMessageClasses}
-              samples={messageClassSamples}
-              renderMessageClass={
-                renderMessageClass
-                  ? (value) =>
-                      renderMessageClass(
-                        value,
-                        messageClassSamples[value] ?? {
-                          id: `legend-${value}`,
-                          from: "",
-                          to: "",
-                          label: value,
-                        },
-                      )
-                  : undefined
-              }
-            />
-          )}
-        </div>
+    <Card className={cn("overflow-hidden border-border/80", className)}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          {model.title ?? "Sequence diagram"}
+        </CardTitle>
+        {model.description && (
+          <CardDescription>{model.description}</CardDescription>
+        )}
       </CardHeader>
-      <Separator />
-      <CardContent className="pb-6">
-        <SequenceStage
-          layout={layout}
-          viewSequence={viewSequence}
-          renderActorLabel={renderActorLabel}
-          renderMessageClass={renderMessageClass}
-          renderMeta={renderMeta}
-          actorColors={actorColors}
-          actorIndexMap={actorIndexMap}
-          actorCount={actorCount}
-          columnTemplate={columnTemplate}
-          messageY={messageY}
-        />
+      <CardContent className="p-0">
+        <div className="w-full overflow-x-auto">
+          <div style={{ minWidth }}>
+            <HeaderGrid
+              layout={{ ...layout, gridTemplate }}
+              onActorClick={onActorClick}
+              renderActorLabel={renderActorLabel}
+              actorColors={actorColors}
+              actorBackgrounds={actorBackgrounds}
+            />
+            <DiagramCanvas
+              layout={layout}
+              minWidth={minWidth}
+              renderMessageLabel={renderMessageLabel}
+              onMessageClick={onMessageClick}
+              actorColors={actorColors}
+              actorBackgrounds={actorBackgrounds}
+            />
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-export function SequenceLegend({
-  messageClasses,
-  renderMessageClass,
-  samples,
-}: {
-  messageClasses: string[];
-  renderMessageClass?: (
-    messageClass: string,
-    sampleMessage?: SequenceMessage,
-  ) => ReactNode;
-  samples?: Record<string, SequenceMessage | undefined>;
-}) {
-  if (!messageClasses.length) return null;
+type HeaderGridProps = {
+  layout: ReturnType<typeof computeLayout> & { gridTemplate: string };
+  renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
+  onActorClick?: (actorId: string) => void;
+  actorColors: Record<string, string>;
+  actorBackgrounds: Record<string, string>;
+};
 
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-      <span className="mr-1 font-semibold">Classes</span>
-      {messageClasses.map((value) => (
-        <div key={value} className="flex items-center gap-1">
-          {renderMessageClass ? (
-            renderMessageClass(value, samples?.[value])
-          ) : (
-            <Badge variant="outline">{value}</Badge>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function SequenceStage({
+function HeaderGrid({
   layout,
-  viewSequence,
   renderActorLabel,
-  renderMessageClass,
-  renderMeta,
+  onActorClick,
   actorColors,
-  actorIndexMap,
-  actorCount,
-  columnTemplate,
-  messageY,
-}: {
-  layout: SequenceLayout;
-  viewSequence: ViewSequence;
-  renderActorLabel?: (actor: SequenceActor) => ReactNode;
-  renderMessageClass?: (
-    messageClass: string,
-    message: SequenceMessage,
-  ) => ReactNode;
-  renderMeta?: (
-    meta: Record<string, string | number>,
-    message: SequenceMessage,
-  ) => ReactNode;
-  actorColors: Record<string, string>;
-  actorIndexMap: Record<string, number>;
-  actorCount: number;
-  columnTemplate: string;
-  messageY: Record<string, number>;
-}) {
-  const headerHeight = 80;
-  const messageOffset = headerHeight + 28;
-  const stageMinHeight = messageOffset + layout.height;
-
-  return (
-    <div
-      className="relative w-full overflow-x-auto"
-      style={{ minHeight: stageMinHeight }}
-    >
-      <div className="min-w-full grid gap-x-0" style={{ gridTemplateColumns: columnTemplate }}>
-        <ActorHeader
-          renderActorLabel={renderActorLabel}
-          actors={viewSequence.actors}
-          actorColors={actorColors}
-          actorIndexMap={actorIndexMap}
-          columnTemplate={columnTemplate}
-        />
-        <div className="relative" style={{ gridColumn: `1 / span ${actorCount}`, marginTop: messageOffset, height: layout.height }}>
-          <div className="absolute inset-0">
-            {viewSequence.actors.map((actor) => (
-              <ActorLane
-                key={actor.id}
-                actor={actor}
-                color={actorColors[actor.id]}
-                actorIndexMap={actorIndexMap}
-                actorCount={actorCount}
-              />
-            ))}
-          </div>
-          <div className="relative h-full">
-            {viewSequence.messages.map((message) => (
-              <MessageEdge
-                key={message.id}
-                message={message}
-                sequenceId={viewSequence.id}
-                renderMessageClass={renderMessageClass}
-                renderMeta={renderMeta}
-                color={
-                  actorColors[message.from] ??
-                  actorColors[message.to] ??
-                  ACTOR_COLORS[0]
-                }
-                actorIndexMap={actorIndexMap}
-                actorCount={actorCount}
-                messageY={messageY[message.id] ?? 0}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function ActorHeader({
-  renderActorLabel,
-  actors,
-  actorColors,
-  actorIndexMap,
-  columnTemplate,
-}: {
-  renderActorLabel?: (actor: SequenceActor) => ReactNode;
-  actors: SequenceActor[];
-  actorColors: Record<string, string>;
-  actorIndexMap: Record<string, number>;
-  columnTemplate: string;
-}) {
-  return (
-    <div
-      className="relative grid items-start"
-      style={{ gridTemplateColumns: columnTemplate, rowGap: "4px" }}
-    >
-      {actors.map((actor) => (
-        <div
-          key={actor.id}
-          className="flex flex-col items-center"
-          style={{ gridColumn: (actorIndexMap[actor.id] ?? 0) + 1 }}
-        >
-          <ActorAnchor
-            actor={actor}
-            renderActorLabel={renderActorLabel}
-            color={actorColors[actor.id]}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function ActorAnchor({
-  actor,
-  renderActorLabel,
-  color,
-}: {
-  actor: SequenceActor;
-  renderActorLabel?: (actor: SequenceActor) => ReactNode;
-  color?: string;
-}) {
+  actorBackgrounds,
+}: HeaderGridProps) {
   const { controller } = useSequenceContext();
-  const { highlight, styles, collapsedActors } = controller.state;
-  const hasChild = Boolean(actor.embeddedSequence);
-  const collapsed = collapsedActors.has(actor.id);
-  const isHighlighted =
-    highlight.actors.has(actor.id) ||
-    (actor.originId && highlight.actors.has(actor.originId)) ||
-    (actor.parentId && highlight.actors.has(actor.parentId)) ||
-    (actor.embeddedSequence &&
-      highlight.sequences.has(actor.embeddedSequence.id));
-
-  const actorStyle =
-    styles.actors[actor.id] ??
-    (actor.originId ? styles.actors[actor.originId] : undefined) ??
-    (actor.parentId ? styles.actors[actor.parentId] : undefined);
-
-  return (
-    <div className="flex w-full flex-col items-center gap-1">
-      <button
-        className={cn(
-          "flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-transparent px-3 py-2 text-sm font-semibold transition hover:underline text-center",
-          actorStyle,
-          actor.className,
-          isHighlighted && "text-primary underline",
-        )}
-        onClick={
-          hasChild ? () => controller.api.toggleActor(actor.id) : undefined
-        }
-        aria-pressed={!collapsed}
-        aria-label={`Actor ${actor.label}`}
-        data-actor-id={actor.id}
-        style={{ borderColor: color ?? undefined, color: color ?? undefined }}
-      >
-        {renderActorLabel ? (
-          renderActorLabel(actor)
-        ) : (
-          <span className="truncate text-sm font-semibold">{actor.label}</span>
-        )}
-        {hasChild &&
-          (collapsed ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ))}
-      </button>
-      {actor.subtitle && (
-        <p className="text-[11px] text-muted-foreground">{actor.subtitle}</p>
-      )}
-    </div>
-  );
-}
-
-export function ActorLane({
-  actor,
-  color,
-  actorIndexMap,
-  actorCount,
-}: {
-  actor: SequenceActor;
-  color?: string;
-  actorIndexMap: Record<string, number>;
-  actorCount: number;
-}) {
-  const { controller } = useSequenceContext();
-  const { highlight, styles } = controller.state;
-  const isHighlighted =
-    highlight.actors.has(actor.id) ||
-    (actor.originId && highlight.actors.has(actor.originId)) ||
-    (actor.parentId && highlight.actors.has(actor.parentId));
-  const actorStyle =
-    styles.actors[actor.id] ??
-    (actor.originId ? styles.actors[actor.originId] : undefined) ??
-    (actor.parentId ? styles.actors[actor.parentId] : undefined);
-  const idx = actorIndexMap[actor.id] ?? 0;
-  const colWidth = 100 / Math.max(actorCount, 1);
-  const x = (idx + 0.5) * colWidth;
+  const { highlight, selection } = controller.state;
 
   return (
     <div
-      className="absolute top-0 flex h-full w-0.5 -translate-x-1/2 transform items-start justify-center"
-      style={{ left: `${x}%` }}
-    >
-      <div
-        className={cn(
-          "h-full w-0.5 rounded-full bg-border",
-          actor.laneClassName,
-          actorStyle,
-          isHighlighted && "shadow-[0_0_0_2px_rgba(59,130,246,0.35)]",
-        )}
-        style={{ backgroundColor: color ?? undefined }}
-        aria-hidden
-      />
-    </div>
-  );
-}
-
-export function MessageEdge({
-  message,
-  sequenceId,
-  renderMessageClass,
-  renderMeta,
-  color,
-  actorIndexMap,
-  actorCount,
-  messageY,
-}: {
-  message: SequenceMessage;
-  sequenceId: string;
-  renderMessageClass?: (
-    messageClass: string,
-    message: SequenceMessage,
-  ) => ReactNode;
-  renderMeta?: (
-    meta: Record<string, string | number>,
-    message: SequenceMessage,
-  ) => ReactNode;
-  color?: string;
-  actorIndexMap: Record<string, number>;
-  actorCount: number;
-  messageY: number;
-}) {
-  const { controller } = useSequenceContext();
-  const { highlight, styles } = controller.state;
-  const fromIdx = actorIndexMap[message.from] ?? 0;
-  const toIdx = actorIndexMap[message.to] ?? fromIdx;
-  const colWidth = 100 / Math.max(actorCount, 1);
-  const leftToRight = toIdx >= fromIdx;
-  const startBias = leftToRight ? 0.75 : 0.25;
-  const endBias = leftToRight ? 0.25 : 0.75;
-  const startX = (fromIdx + startBias) * colWidth;
-  const endX = (toIdx + endBias) * colWidth;
-  const left = Math.min(startX, endX);
-  const width = Math.max(Math.abs(endX - startX), colWidth * 0.15);
-  const styleMessageClass = message.messageClass
-    ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
-    : undefined;
-  const messageStyle =
-    styles.messages[message.id] ??
-    (message.originId ? styles.messages[message.originId] : undefined);
-  const active =
-    highlight.messages.has(message.id) ||
-    (message.originId && highlight.messages.has(message.originId)) ||
-    (message.messageClass && highlight.messageClasses.has(message.messageClass)) ||
-    (message.originId && highlight.messageClasses.has(message.originId)) ||
-    highlight.actors.has(message.from) ||
-    highlight.actors.has(message.to) ||
-    highlight.sequences.has(sequenceId);
-
-  const lineColor = color ?? "hsl(215 16% 47%)";
-  const startDot = (
-    <div
-      className="h-[7px] w-[7px] rounded-full"
-      style={{ backgroundColor: lineColor }}
-      aria-hidden
-    />
-  );
-  const endArrow = (
-    <div
-      className={cn(
-        "h-0 w-0 border-y-[6px] border-y-transparent",
-        leftToRight ? "border-l-[9px]" : "border-r-[9px] rotate-180",
-      )}
+      className="grid gap-2 border-b border-border/80 bg-white py-3"
       style={{
-        borderLeftColor: leftToRight ? lineColor : undefined,
-        borderRightColor: !leftToRight ? lineColor : undefined,
+        gridTemplateColumns: layout.gridTemplate,
+        gridAutoRows: `${layout.headerRowHeight}px`,
       }}
-      aria-hidden
-    />
+    >
+      {layout.headerRows.flatMap((row, depth) =>
+        row.map((actor) => {
+          const highlighted = highlight.actors.has(actor.actorId);
+          const selected = selection.actors.has(actor.actorId);
+          const color = actorColors[actor.actorId];
+          const background = actorBackgrounds[actor.actorId];
+          const justify =
+            actor.alignment === "left"
+              ? "justify-start"
+              : actor.alignment === "right"
+                ? "justify-end"
+                : "justify-center";
+
+          return (
+            <div
+              key={`${actor.actorId}-${depth}`}
+              style={{
+                gridColumn: `${actor.leafStart + 1} / span ${actor.leafSpan}`,
+                gridRow: depth + 1,
+              }}
+              className="flex flex-col justify-center"
+            >
+              <div className={cn("flex items-center gap-2", justify)}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (actor.hasChildren) {
+                      controller.api.toggleActorExpansion(actor.actorId);
+                    }
+                    controller.api.toggleActorSelection(actor.actorId);
+                    onActorClick?.(actor.actorId);
+                  }}
+                  data-actor-id={actor.actorId}
+                  data-highlighted={highlighted ? "true" : undefined}
+                  data-selected={selected ? "true" : undefined}
+                  className={cn(
+                    "flex min-h-9 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition border",
+                    actor.className,
+                    highlighted && "ring-1 ring-primary/60 text-primary",
+                    selected && "ring-2 ring-primary/70 ring-offset-1",
+                  )}
+                  style={{
+                    borderColor: color ?? undefined,
+                    backgroundColor: background,
+                  }}
+                >
+                  {actor.hasChildren && (
+                    actor.expanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )
+                  )}
+                  {renderActorLabel ? (
+                    renderActorLabel(actor)
+                  ) : (
+                    <span className="truncate">{actor.label}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        }),
+      )}
+    </div>
   );
+}
+
+type DiagramCanvasProps = {
+  layout: ReturnType<typeof computeLayout>;
+  minWidth: number;
+  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
+  onMessageClick?: (messageId: string) => void;
+  actorColors: Record<string, string>;
+  actorBackgrounds: Record<string, string>;
+};
+
+function DiagramCanvas({
+  layout,
+  minWidth,
+  renderMessageLabel,
+  onMessageClick,
+  actorColors,
+  actorBackgrounds,
+}: DiagramCanvasProps) {
+  const { controller } = useSequenceContext();
+  const { highlight, selection } = controller.state;
+
+  const viewWidth = layout.leafCount * COLUMN_WIDTH;
+  const height = layout.messageAreaHeight;
+
+  const regionNodes = [...layout.visibleActors]
+    .filter((actor) => actor.hasChildren && actor.expanded)
+    .sort((a, b) => a.depth - b.depth);
+  const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
 
   return (
     <div
-      className={cn(
-        "absolute z-10 px-1 pointer-events-none",
-        message.className,
-        messageStyle,
-        styleMessageClass,
-      )}
-      style={{ left: `${left}%`, width: `${width}%`, top: messageY }}
-      data-message-id={message.id}
-      data-active={active}
+      className="relative"
+      style={{ minWidth, height }}
     >
-      <div className="relative">
-        <div
-          className="absolute left-1/2 top-[-22px] -translate-x-1/2 pointer-events-auto"
-          style={{ color: lineColor }}
-        >
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold bg-white/90 shadow-sm",
-              active && "ring-1 ring-primary/50 ring-offset-1",
-            )}
-          >
-            <span>{message.label}</span>
-            <ArrowRight className={cn("h-3 w-3", !leftToRight && "rotate-180")} />
-            <span className="text-muted-foreground">
-              {message.kind ?? "sync"}
-            </span>
-            {message.messageClass &&
-              (renderMessageClass ? (
-                renderMessageClass(message.messageClass, message)
-              ) : (
-                <Badge variant="outline">{message.messageClass}</Badge>
-              ))}
-          </div>
-        </div>
-        <div
-          className="flex items-center"
-          style={{ opacity: active ? 0.9 : 0.45 }}
-        >
-          {leftToRight ? (
-            <>
-              {startDot}
+      <div className="absolute inset-0" style={{ width: viewWidth }}>
+        {regionNodes.map((actor) => {
+          const span = layout.spans[actor.actorId];
+          const xStart = span.start * COLUMN_WIDTH;
+          const xEnd = span.end * COLUMN_WIDTH;
+          const highlighted = highlight.actors.has(actor.actorId);
+          const selected = selection.actors.has(actor.actorId);
+          const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
+          const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.3);
+          const fill = baseFill;
+
+          return (
+            <div key={`region-${actor.actorId}`}>
               <div
-                className="mx-1 h-[2px] flex-1"
-                style={{ backgroundColor: lineColor }}
+                className={cn("absolute inset-y-0", actor.regionClassName)}
+                style={{
+                  left: xStart,
+                  width: xEnd - xStart,
+                  background: fill,
+                }}
               />
-              {endArrow}
-            </>
-          ) : (
-            <>
-              {endArrow}
               <div
-                className="mx-1 h-[2px] flex-1"
-                style={{ backgroundColor: lineColor }}
+                className="absolute inset-y-0 w-[2px]"
+                style={{ left: xStart, backgroundColor: color }}
               />
-              {startDot}
-            </>
-          )}
-        </div>
+              <div
+                className="absolute inset-y-0 w-[2px]"
+                style={{ left: xEnd, backgroundColor: color }}
+              />
+            </div>
+          );
+        })}
+
+        {leafNodes.map((actor) => {
+          const x = layout.anchors[actor.actorId] * COLUMN_WIDTH;
+          const highlighted = highlight.actors.has(actor.actorId);
+          const selected = selection.actors.has(actor.actorId);
+          const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
+          const stroke = selected
+            ? base
+            : highlighted
+              ? base
+              : base;
+
+          return (
+            <div
+              key={`line-${actor.actorId}`}
+              className="absolute inset-y-0 w-[2px]"
+              style={{ left: x, backgroundColor: stroke }}
+            />
+          );
+        })}
+
+        {layout.messages.map(({ message, y }) => {
+          const getAnchor = (actorId: string, toward: "left" | "right") => {
+            const span = layout.spans[actorId];
+            const width = span.end - span.start;
+            if (width > 1) {
+              return toward === "right"
+                ? span.end * COLUMN_WIDTH
+                : span.start * COLUMN_WIDTH;
+            }
+            return layout.anchors[actorId] * COLUMN_WIDTH;
+          };
+
+          const toAnchor =
+            layout.anchors[message.toActorId] * COLUMN_WIDTH;
+          const fromAnchor =
+            layout.anchors[message.fromActorId] * COLUMN_WIDTH;
+          const direction = toAnchor >= fromAnchor ? 1 : -1;
+          const fromX = getAnchor(
+            message.fromActorId,
+            direction > 0 ? "right" : "left",
+          );
+          const toX = getAnchor(
+            message.toActorId,
+            direction > 0 ? "left" : "right",
+          );
+          const left = Math.min(fromX, toX);
+          const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
+          const stroke = "#111827"; // neutral black/near-black for all messages
+          const strokeHighlighted =
+            highlight.messages.has(message.messageId) ||
+            highlight.actors.has(message.fromActorId) ||
+            highlight.actors.has(message.toActorId);
+          const selected = selection.messages.has(message.messageId);
+
+          return (
+            <div
+              key={message.messageId}
+              className="absolute z-10 cursor-pointer"
+              data-message-id={message.messageId}
+              data-highlighted={
+                strokeHighlighted ? "true" : undefined
+              }
+              data-selected={
+                selected ? "true" : undefined
+              }
+              style={{ top: y - 2, left, width }}
+              onClick={() => {
+                controller.api.toggleMessageSelection(message.messageId);
+                onMessageClick?.(message.messageId);
+              }}
+            >
+              <div className="flex items-center">
+                {direction > 0 ? (
+                  <>
+                    <span
+                      className="h-[7px] w-[7px] rounded-full"
+                      style={{ backgroundColor: stroke }}
+                    />
+                    <div
+                      className="mx-1 h-[2px] flex-1"
+                      style={{ backgroundColor: stroke }}
+                    />
+                    <div
+                      className="h-0 w-0 border-y-[6px] border-y-transparent"
+                      style={{
+                        borderLeft: `10px solid ${stroke}`,
+                      }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="h-0 w-0 border-y-[6px] border-y-transparent"
+                      style={{
+                        borderRight: `10px solid ${stroke}`,
+                      }}
+                    />
+                    <div
+                      className="mx-1 h-[2px] flex-1"
+                      style={{ backgroundColor: stroke }}
+                    />
+                    <span
+                      className="h-[7px] w-[7px] rounded-full"
+                      style={{ backgroundColor: stroke }}
+                    />
+                  </>
+                )}
+              </div>
+              <div className="pointer-events-none mt-1 flex w-full justify-center">
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-foreground shadow-sm ring-1 ring-slate-200",
+                    strokeHighlighted && "ring-primary/60 text-primary",
+                    selected && "ring-2 ring-primary/70",
+                    message.className,
+                  )}
+                >
+                  {renderMessageLabel ? (
+                    renderMessageLabel(message)
+                  ) : (
+                    <span className="truncate">{message.label}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {message.meta && renderMeta && (
-        <div className="mt-2">{renderMeta(message.meta, message)}</div>
-      )}
     </div>
   );
 }

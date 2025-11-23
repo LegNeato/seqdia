@@ -3,29 +3,29 @@ import {
   useSequenceController,
   type SequenceController,
 } from "@/hooks/useSequenceController";
-import { type Sequence } from "@/lib/sequence/types";
+import { type SequenceDiagramModel } from "@/lib/sequence/types";
 
 type SequenceContextValue = {
-  sequence: Sequence;
+  model: SequenceDiagramModel;
   controller: SequenceController;
 };
 
 const SequenceContext = createContext<SequenceContextValue | null>(null);
 
 type SequenceProviderProps = {
-  sequence: Sequence;
+  model: SequenceDiagramModel;
   controller?: SequenceController;
   children: ReactNode;
 };
 
 export function SequenceProvider({
-  sequence,
+  model,
   controller,
   children,
 }: SequenceProviderProps) {
-  const internal = useSequenceController(sequence);
+  const internal = useSequenceController(model);
   const value: SequenceContextValue = {
-    sequence,
+    model,
     controller: controller ?? internal,
   };
 

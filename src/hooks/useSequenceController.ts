@@ -1,35 +1,35 @@
 import { useMemo, useState } from "react";
 import {
   defaultHighlightState,
-  defaultStyleRegistry,
+  defaultSelectionState,
   type HighlightState,
-  type StyleRegistry,
+  type SelectionState,
 } from "@/lib/sequence/state";
-import { type Sequence } from "@/lib/sequence/types";
+import { type ActorNode, type SequenceDiagramModel } from "@/lib/sequence/types";
 
 export type SequenceControllerApi = {
-  highlightActor: (actorId: string | string[]) => void;
-  highlightMessage: (messageId: string | string[]) => void;
-  highlightMessageClass: (messageClass: string | string[]) => void;
-  highlightSequence: (sequenceId: string | string[]) => void;
+  highlightActors: (actorId: string | string[]) => void;
+  highlightMessages: (messageId: string | string[]) => void;
   clearHighlights: () => void;
-  setActorStyle: (actorId: string, className: string) => void;
-  setMessageStyle: (messageId: string, className: string) => void;
-  setMessageClassStyle: (messageClass: string, className: string) => void;
-  setSequenceStyle: (sequenceId: string, className: string) => void;
-  toggleActor: (actorId: string) => void;
+  selectActors: (actorId: string | string[]) => void;
+  selectMessages: (messageId: string | string[]) => void;
+  toggleActorSelection: (actorId: string) => void;
+  toggleMessageSelection: (messageId: string) => void;
+  clearSelection: () => void;
+  toggleActorExpansion: (actorId: string) => void;
   collapseActor: (actorId: string) => void;
   expandActor: (actorId: string) => void;
+  setExpandedActors: (actorIds: Set<string>) => void;
 };
 
 export type SequenceControllerState = {
   highlight: HighlightState;
-  styles: StyleRegistry;
-  collapsedActors: Set<string>;
+  selection: SelectionState;
+  expandedActors: Set<string>;
 };
 
 export type SequenceController = {
-  sequence: Sequence;
+  model: SequenceDiagramModel;
   state: SequenceControllerState;
   api: SequenceControllerApi;
 };
@@ -38,73 +38,90 @@ function ensureArray(value: string | string[]) {
   return Array.isArray(value) ? value : [value];
 }
 
-export function useSequenceController(sequence: Sequence): SequenceController {
+function deriveDefaultExpandedActors(actors: ActorNode[]): Set<string> {
+  const expanded = new Set<string>();
+  const walk = (nodes: ActorNode[]) => {
+    nodes.forEach((node) => {
+      const hasChildren = node.children && node.children.length > 0;
+      if (hasChildren && (node.defaultExpanded ?? true)) {
+        expanded.add(node.actorId);
+      }
+      if (node.children) {
+        walk(node.children);
+      }
+    });
+  };
+  walk(actors);
+  return expanded;
+}
+
+export function useSequenceController(
+  model: SequenceDiagramModel,
+): SequenceController {
   const [highlight, setHighlight] = useState<HighlightState>(
     defaultHighlightState,
   );
-  const [styles, setStyles] = useState<StyleRegistry>(defaultStyleRegistry);
-  const [collapsedActors, setCollapsedActors] = useState<Set<string>>(
-    () =>
-      new Set(
-        sequence.actors
-          .filter((actor) => actor.defaultCollapsed)
-          .map((actor) => actor.id),
-      ),
+  const [selection, setSelection] = useState<SelectionState>(
+    defaultSelectionState,
+  );
+  const [expandedActors, setExpandedActors] = useState<Set<string>>(() =>
+    deriveDefaultExpandedActors(model.actors),
   );
 
   const api: SequenceControllerApi = useMemo(
     () => ({
-      highlightActor: (actorId) => {
+      highlightActors: (actorId) => {
         const ids = ensureArray(actorId);
         setHighlight((prev) => ({
           ...prev,
           actors: new Set(ids),
         }));
       },
-      highlightMessage: (messageId) => {
+      highlightMessages: (messageId) => {
         const ids = ensureArray(messageId);
         setHighlight((prev) => ({
           ...prev,
           messages: new Set(ids),
         }));
       },
-      highlightMessageClass: (messageClass) => {
-        const classes = ensureArray(messageClass);
-        setHighlight((prev) => ({
+      clearHighlights: () => setHighlight(defaultHighlightState()),
+      selectActors: (actorId) => {
+        const ids = ensureArray(actorId);
+        setSelection((prev) => ({
           ...prev,
-          messageClasses: new Set(classes),
+          actors: new Set(ids),
         }));
       },
-      highlightSequence: (sequenceId) => {
-        const ids = ensureArray(sequenceId);
-        setHighlight((prev) => ({
+      selectMessages: (messageId) => {
+        const ids = ensureArray(messageId);
+        setSelection((prev) => ({
           ...prev,
-          sequences: new Set(ids),
+          messages: new Set(ids),
         }));
       },
-      clearHighlights: () => setHighlight(defaultHighlightState),
-      setActorStyle: (actorId, className) =>
-        setStyles((prev) => ({
-          ...prev,
-          actors: { ...prev.actors, [actorId]: className },
-        })),
-      setMessageStyle: (messageId, className) =>
-        setStyles((prev) => ({
-          ...prev,
-          messages: { ...prev.messages, [messageId]: className },
-        })),
-      setMessageClassStyle: (messageClass, className) =>
-        setStyles((prev) => ({
-          ...prev,
-          messageClasses: { ...prev.messageClasses, [messageClass]: className },
-        })),
-      setSequenceStyle: (sequenceId, className) =>
-        setStyles((prev) => ({
-          ...prev,
-          sequences: { ...prev.sequences, [sequenceId]: className },
-        })),
-      toggleActor: (actorId) =>
-        setCollapsedActors((prev) => {
+      toggleActorSelection: (actorId) =>
+        setSelection((prev) => {
+          const next = new Set(prev.actors);
+          if (next.has(actorId)) {
+            next.delete(actorId);
+          } else {
+            next.add(actorId);
+          }
+          return { ...prev, actors: next };
+        }),
+      toggleMessageSelection: (messageId) =>
+        setSelection((prev) => {
+          const next = new Set(prev.messages);
+          if (next.has(messageId)) {
+            next.delete(messageId);
+          } else {
+            next.add(messageId);
+          }
+          return { ...prev, messages: next };
+        }),
+      clearSelection: () => setSelection(defaultSelectionState()),
+      toggleActorExpansion: (actorId) =>
+        setExpandedActors((prev) => {
           const next = new Set(prev);
           if (next.has(actorId)) {
             next.delete(actorId);
@@ -114,25 +131,26 @@ export function useSequenceController(sequence: Sequence): SequenceController {
           return next;
         }),
       collapseActor: (actorId) =>
-        setCollapsedActors((prev) => {
-          const next = new Set(prev);
-          next.add(actorId);
-          return next;
-        }),
-      expandActor: (actorId) =>
-        setCollapsedActors((prev) => {
+        setExpandedActors((prev) => {
           const next = new Set(prev);
           next.delete(actorId);
           return next;
         }),
+      expandActor: (actorId) =>
+        setExpandedActors((prev) => {
+          const next = new Set(prev);
+          next.add(actorId);
+          return next;
+        }),
+      setExpandedActors: (actorIds) => setExpandedActors(new Set(actorIds)),
     }),
     [],
   );
 
   const state = useMemo(
-    () => ({ highlight, styles, collapsedActors }),
-    [collapsedActors, highlight, styles],
+    () => ({ highlight, selection, expandedActors }),
+    [expandedActors, highlight, selection],
   );
 
-  return { sequence, state, api };
+  return { model, state, api };
 }

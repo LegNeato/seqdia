@@ -1,56 +1,43 @@
-export type MessageKind = "sync" | "async" | "return" | "note";
+export type ActorAlignment = "left" | "center" | "right";
 
-export type MessageClass =
-  | "success"
-  | "info"
-  | "warning"
-  | "error"
-  | "neutral"
-  | string;
+export type ActorNode = {
+  actorId: string;
+  label: string;
+  parentActorId?: string | null;
+  children?: ActorNode[];
+  alignment?: ActorAlignment;
+  /**
+   * Optional style hints for label/line/region rendering.
+   */
+  className?: string;
+  regionClassName?: string;
+  /**
+   * Whether the node should start expanded. Defaults to true when children are present.
+   */
+  defaultExpanded?: boolean;
+};
 
-export interface SequenceMessage {
-  id: string;
-  from: string;
-  to: string;
+export type SequenceMessage = {
+  messageId: string;
+  fromActorId: string;
+  toActorId: string;
   label: string;
   /**
-   * Optional identifier of the source message when the diagram expands nested sequences.
+   * Explicit vertical row index. Unique per message.
    */
-  originId?: string;
-  /**
-   * Parent actor id if this message was lifted from an embedded sequence.
-   */
-  parentId?: string;
-  description?: string;
-  messageClass?: MessageClass;
-  kind?: MessageKind;
+  rowIndex?: number;
   className?: string;
-  meta?: Record<string, string | number>;
-}
-
-export interface SequenceActor {
-  id: string;
-  label: string;
   /**
-   * Optional identifier of the source actor when the diagram expands nested sequences.
+   * Arbitrary payload for renderers (metadata, badges, etc.).
    */
-  originId?: string;
-  /**
-   * Parent actor id if this actor originated from an embedded sequence.
-   */
-  parentId?: string;
-  subtitle?: string;
-  className?: string;
-  laneClassName?: string;
-  embeddedSequence?: Sequence;
-  defaultCollapsed?: boolean;
-}
+  payload?: Record<string, unknown>;
+};
 
-export interface Sequence {
-  id: string;
-  label?: string;
+export type SequenceDiagramModel = {
+  id?: string;
+  title?: string;
   description?: string;
-  actors: SequenceActor[];
+  actors: ActorNode[];
   messages: SequenceMessage[];
   className?: string;
-}
+};

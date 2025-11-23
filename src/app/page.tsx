@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { Layers3, RefreshCw } from "lucide-react";
 
 import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,254 +13,161 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useSequenceController } from "@/hooks/useSequenceController";
-import { type Sequence } from "@/lib/sequence/types";
+import {
+  type ActorNode,
+  type SequenceDiagramModel,
+} from "@/lib/sequence/types";
 
-const paymentsSubsequence: Sequence = {
-  id: "payments-subflow",
-  label: "Payments orchestration",
-  description: "Nested inside the Payments actor.",
-  actors: [
-    { id: "payments", label: "Payments service" },
-    { id: "stripe", label: "Stripe" },
-    { id: "fraud", label: "Fraud checker" },
-  ],
-  messages: [
-    {
-      id: "pay-intent",
-      from: "payments",
-      to: "stripe",
-      label: "Create intent",
-      messageClass: "payments",
-      meta: { provider: "stripe" },
-    },
-    {
-      id: "pay-risk",
-      from: "stripe",
-      to: "fraud",
-      label: "Share risk",
-      messageClass: "risk",
-      kind: "async",
-      description: "Stripe hands off fraud data for a second opinion.",
-    },
-    {
-      id: "pay-risk-return",
-      from: "fraud",
-      to: "payments",
-      label: "Risk evaluation",
-      messageClass: "risk",
-      kind: "return",
-    },
-    {
-      id: "pay-capture",
-      from: "payments",
-      to: "stripe",
-      label: "Capture funds",
-      messageClass: "happy-path",
-      kind: "sync",
-      meta: { capture: "manual" },
-    },
-  ],
-};
+function collectActorIds(actors: ActorNode[]): string[] {
+  return actors.flatMap((actor) => [
+    actor.actorId,
+    ...collectActorIds(actor.children ?? []),
+  ]);
+}
 
-const authSubsequence: Sequence = {
-  id: "auth-subflow",
-  label: "Auth session workflow",
-  description: "Logged under the Auth actor.",
-  actors: [
-    { id: "auth", label: "Auth service" },
-    { id: "session", label: "Session issuer" },
-    { id: "audit", label: "Audit log" },
-  ],
-  messages: [
-    {
-      id: "auth-issue",
-      from: "auth",
-      to: "session",
-      label: "Issue session",
-      messageClass: "auth",
-    },
-    {
-      id: "session-audit",
-      from: "session",
-      to: "audit",
-      label: "Log success",
-      messageClass: "audit",
-      kind: "async",
-    },
-    {
-      id: "audit-ack",
-      from: "audit",
-      to: "auth",
-      label: "Ack audit",
-      messageClass: "audit",
-      kind: "return",
-    },
-  ],
-};
-
-const checkoutSequence: Sequence = {
+const checkoutModel: SequenceDiagramModel = {
   id: "checkout-sequence",
-  label: "Checkout orchestration",
+  title: "Checkout orchestration",
   description:
-    "Composable diagram with API-driven highlighting, styling, and nested actors.",
+    "Tree-based labels drive the header grid, regions, and visible columns.",
   actors: [
-    { id: "browser", label: "User browser" },
-    { id: "frontend", label: "Web app", subtitle: "Next.js" },
+    { actorId: "browser", label: "User browser", alignment: "left" },
+    { actorId: "frontend", label: "Next.js frontend" },
     {
-      id: "auth",
-      label: "Auth service",
-      subtitle: "OpenID Connect",
-      embeddedSequence: authSubsequence,
-      defaultCollapsed: true,
+      actorId: "auth",
+      label: "Auth stack",
+      defaultExpanded: false,
+      children: [
+        { actorId: "session", label: "Session issuer" },
+        { actorId: "audit", label: "Audit log" },
+      ],
     },
     {
-      id: "payments",
+      actorId: "payments",
       label: "Payments",
-      subtitle: "Orchestrator",
-      embeddedSequence: paymentsSubsequence,
-      defaultCollapsed: true,
+      defaultExpanded: false,
+      alignment: "center",
+      children: [
+        { actorId: "orchestrator", label: "Orchestrator" },
+        { actorId: "stripe", label: "Stripe" },
+        { actorId: "fraud", label: "Fraud checker" },
+      ],
     },
-    { id: "database", label: "Database", subtitle: "Postgres 16" },
+    { actorId: "database", label: "Postgres 16", alignment: "right" },
   ],
   messages: [
     {
-      id: "start-checkout",
-      from: "browser",
-      to: "frontend",
+      messageId: "start-checkout",
+      fromActorId: "browser",
+      toActorId: "frontend",
       label: "Start checkout",
-      messageClass: "entry",
-      meta: { path: "/checkout" },
+      rowIndex: 0,
     },
     {
-      id: "auth-session",
-      from: "frontend",
-      to: "auth",
+      messageId: "auth-session",
+      fromActorId: "frontend",
+      toActorId: "auth",
       label: "Authenticate session",
-      messageClass: "auth",
-      kind: "sync",
-      meta: { latency: "110ms" },
+      rowIndex: 1,
     },
     {
-      id: "profile-lookup",
-      from: "auth",
-      to: "database",
+      messageId: "issue-session",
+      fromActorId: "auth",
+      toActorId: "session",
+      label: "Issue tokens",
+      rowIndex: 2,
+    },
+    {
+      messageId: "audit-session",
+      fromActorId: "session",
+      toActorId: "audit",
+      label: "Log session",
+      rowIndex: 3,
+    },
+    {
+      messageId: "profile-lookup",
+      fromActorId: "auth",
+      toActorId: "database",
       label: "Load profile",
-      messageClass: "db",
-      kind: "async",
+      rowIndex: 4,
     },
     {
-      id: "profile-response",
-      from: "database",
-      to: "auth",
-      label: "Profile ready",
-      messageClass: "db",
-      kind: "return",
-    },
-    {
-      id: "create-intent",
-      from: "frontend",
-      to: "payments",
+      messageId: "intent",
+      fromActorId: "frontend",
+      toActorId: "payments",
       label: "Create intent",
-      messageClass: "payments",
+      rowIndex: 5,
     },
     {
-      id: "persist-intent",
-      from: "payments",
-      to: "database",
+      messageId: "persist-intent",
+      fromActorId: "payments",
+      toActorId: "database",
       label: "Persist intent",
-      description: "Use async queue if replication lags.",
-      messageClass: "risk",
-      kind: "async",
-      meta: { retries: 1 },
+      rowIndex: 6,
     },
     {
-      id: "persisted",
-      from: "database",
-      to: "payments",
-      label: "Intent persisted",
-      messageClass: "db",
-      kind: "return",
+      messageId: "stripe-call",
+      fromActorId: "payments",
+      toActorId: "stripe",
+      label: "Call Stripe",
+      rowIndex: 7,
     },
     {
-      id: "notify-auth",
-      from: "payments",
-      to: "auth",
-      label: "Notify auth of instrument",
-      messageClass: "payments",
-      kind: "async",
+      messageId: "fraud-check",
+      fromActorId: "stripe",
+      toActorId: "fraud",
+      label: "Share risk",
+      rowIndex: 8,
     },
     {
-      id: "confirm",
-      from: "payments",
-      to: "frontend",
+      messageId: "confirm",
+      fromActorId: "payments",
+      toActorId: "frontend",
       label: "Confirm payment",
-      messageClass: "happy-path",
-      kind: "sync",
+      rowIndex: 9,
     },
     {
-      id: "receipt",
-      from: "frontend",
-      to: "browser",
+      messageId: "render",
+      fromActorId: "frontend",
+      toActorId: "browser",
       label: "Render receipt",
-      messageClass: "happy-path",
-      kind: "return",
+      rowIndex: 10,
     },
   ],
 };
 
 export default function Home() {
-  const controller = useSequenceController(checkoutSequence);
-
-  useEffect(() => {
-    controller.api.setMessageClassStyle(
-      "risk",
-      "border-amber-300 bg-amber-50/90 text-amber-900",
-    );
-    controller.api.setMessageClassStyle(
-      "db",
-      "border-sky-200 bg-sky-50/90 text-sky-900",
-    );
-    controller.api.setMessageClassStyle(
-      "happy-path",
-      "border-emerald-300 bg-emerald-50/80 text-emerald-900",
-    );
-    controller.api.setMessageClassStyle(
-      "auth",
-      "border-indigo-200 bg-indigo-50 text-indigo-900",
-    );
-    controller.api.setMessageClassStyle(
-      "payments",
-      "border-purple-200 bg-purple-50 text-purple-900",
-    );
-    controller.api.setMessageClassStyle(
-      "entry",
-      "border-slate-200 bg-slate-50 text-slate-900",
-    );
-    controller.api.setActorStyle("database", "bg-slate-50");
-    controller.api.setSequenceStyle(
-      checkoutSequence.id,
-      "bg-gradient-to-br from-white via-slate-50 to-blue-50",
-    );
-  }, [controller.api]);
+  const controller = useSequenceController(checkoutModel);
+  const allActorIds = useMemo(
+    () => new Set(collectActorIds(checkoutModel.actors)),
+    [],
+  );
 
   const highlightHappyPath = () =>
-    controller.api.highlightMessage([
+    controller.api.highlightMessages([
       "auth-session",
+      "issue-session",
       "profile-lookup",
-      "profile-response",
-      "create-intent",
+      "intent",
       "persist-intent",
+      "stripe-call",
       "confirm",
-      "receipt",
+      "render",
     ]);
 
-  const highlightRisk = () => controller.api.highlightMessageClass("risk");
-  const highlightDatabase = () => controller.api.highlightActor("database");
-  const expandPayments = () => controller.api.expandActor("payments");
-  const collapsePayments = () => controller.api.collapseActor("payments");
-  const clear = () => controller.api.clearHighlights();
+  const spotlightInfra = () =>
+    controller.api.highlightActors(["auth", "payments", "database"]);
+
+  const expandAll = () => controller.api.setExpandedActors(allActorIds);
+  const collapseNested = () => {
+    controller.api.collapseActor("auth");
+    controller.api.collapseActor("payments");
+  };
+  const clear = () => {
+    controller.api.clearHighlights();
+    controller.api.clearSelection();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -269,71 +177,64 @@ export default function Home() {
             <div>
               <p className="text-sm font-semibold text-primary">SeqDia</p>
               <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
-                Interactive, composable sequence diagrams for product engineers
+                Tree-driven sequence diagrams for React + Tailwind
               </h1>
               <p className="text-sm text-muted-foreground">
-                Highlight flows, recolor message classes, and open nested
-                sequences with a tiny hook-first API.
+                Columns come from visible leaves. Expand nodes anywhere to
+                reshape the grid and recompute anchors.
               </p>
             </div>
             <Badge variant="secondary" className="flex items-center gap-2">
               <Layers3 className="h-4 w-4" />
-              Nested actors
+              Arbitrary depth
             </Badge>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={highlightHappyPath} variant="default">
-              Highlight checkout path
+              Highlight happy path
             </Button>
-            <Button onClick={highlightRisk} variant="outline">
-              Highlight risk steps
+            <Button onClick={spotlightInfra} variant="outline">
+              Highlight backend actors
             </Button>
-            <Button onClick={highlightDatabase} variant="secondary">
-              Spotlight database actor
+            <Button onClick={expandAll} variant="secondary">
+              Expand everything
             </Button>
-            <Button onClick={expandPayments} variant="outline">
-              Expand payments
-            </Button>
-            <Button onClick={collapsePayments} variant="outline">
-              Collapse payments
+            <Button onClick={collapseNested} variant="outline">
+              Collapse auth + payments
             </Button>
             <Button onClick={clear} variant="ghost">
               <RefreshCw className="mr-1 h-4 w-4" />
-              Clear highlights
+              Clear highlight/selection
             </Button>
           </div>
         </header>
 
-        <SequenceDiagram
-          sequence={checkoutSequence}
-          controller={controller}
-        />
+        <SequenceDiagram model={checkoutModel} controller={controller} />
 
         <Card>
           <CardHeader>
-            <CardTitle>Composable control surface</CardTitle>
+            <CardTitle>Behaviors from the PRD</CardTitle>
             <CardDescription>
-              The same diagram is driven by the exposed API so you can plug it
-              into analytics, traces, or toggles.
+              Column count follows visible leaves. Messages disappear when
+              endpoints or ancestors are collapsed.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-foreground font-semibold text-sm">
-                Available actions
+              <p className="text-foreground text-sm font-semibold">
+                Layout rules demonstrated
               </p>
               <ul className="list-disc space-y-1 pl-4">
-                <li>Highlight actors, messages, message classes, or sequences.</li>
-                <li>Apply custom classNames per actor/message/class.</li>
-                <li>Toggle embedded sequences per actor with one call.</li>
+                <li>Header rows per depth with spans based on visible leaves.</li>
+                <li>Region boundaries for expanded nodes; single lines for collapsed nodes.</li>
+                <li>Messages hide when endpoints or ancestors are not visible.</li>
               </ul>
             </div>
             <div className="rounded-lg border bg-muted/40 p-3 text-xs">
               <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
-{`controller.api.highlightMessage(["persist-intent"]);
-controller.api.highlightMessageClass("warning");
-controller.api.setMessageClassStyle("warning", "border-amber-400 bg-amber-50");
-controller.api.expandActor("payments");`}
+{`controller.api.highlightMessages(["intent", "confirm"]);
+controller.api.collapseActor("payments");
+controller.api.toggleActorExpansion("auth");`}
               </pre>
             </div>
           </CardContent>
