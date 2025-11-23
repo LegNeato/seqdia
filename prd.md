@@ -184,7 +184,7 @@ A message is shown only if:
 - `toActorId` is visible  
 - All ancestors of both nodes are expanded  
 
-Otherwise hidden.
+Otherwise hidden. Hidden messages do not reserve vertical space; rows compact and reflow when nodes collapse or expand.
 
 ### 5.3 Z-Order
 

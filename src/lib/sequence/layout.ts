@@ -209,28 +209,25 @@ export function computeLayout(
   const annotatedMessages = visibleMessages.map((message, idx) => ({
     message,
     order: idx,
-    row: message.rowIndex ?? idx,
+    hint: message.rowIndex ?? idx,
   }));
 
   annotatedMessages.sort((a, b) => {
-    if (a.row === b.row) return a.order - b.order;
-    return a.row - b.row;
+    if (a.hint === b.hint) return a.order - b.order;
+    return a.hint - b.hint;
   });
 
-  const maxRowIndex =
-    annotatedMessages.length > 0
-      ? Math.max(...annotatedMessages.map((item) => item.row))
-      : 0;
-
-  const messages: PositionedMessage[] = annotatedMessages.map((item) => ({
-    message: item.message,
-    rowIndex: item.row,
-    y: rowPadding + item.row * rowHeight,
-  }));
+  const messages: PositionedMessage[] = annotatedMessages.map(
+    (item, denseIndex) => ({
+      message: item.message,
+      rowIndex: denseIndex,
+      y: rowPadding + denseIndex * rowHeight,
+    }),
+  );
 
   const messageAreaHeight =
-    annotatedMessages.length > 0
-      ? rowPadding * 2 + (maxRowIndex + 1) * rowHeight
+    messages.length > 0
+      ? rowPadding * 2 + messages.length * rowHeight
       : rowPadding * 2 + rowHeight;
 
   const maxDepth = headerRows.length ? headerRows.length - 1 : 0;
