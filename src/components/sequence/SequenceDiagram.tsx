@@ -569,6 +569,7 @@ export function MessageEdge({
 
   const left = Math.min(pos.fromX, pos.toX);
   const width = Math.max(Math.abs(pos.toX - pos.fromX), 8);
+  const leftToRight = pos.toX >= pos.fromX;
   const styleMessageClass = message.messageClass
     ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
     : undefined;
@@ -604,7 +605,9 @@ export function MessageEdge({
           style={{ color: lineColor }}
         >
           <span>{message.label}</span>
-          <ArrowRight className="h-3 w-3" />
+          <ArrowRight
+            className={cn("h-3 w-3", !leftToRight && "rotate-180")}
+          />
           <span className="text-muted-foreground">{message.kind ?? "sync"}</span>
           {message.messageClass &&
             (renderMessageClass ? (
@@ -614,9 +617,31 @@ export function MessageEdge({
             ))}
         </div>
         <div
-          className="mt-1 h-px w-full"
-          style={{ backgroundColor: lineColor, opacity: active ? 0.9 : 0.4 }}
-        />
+          className="mt-1 flex items-center"
+          style={{ opacity: active ? 0.9 : 0.4 }}
+        >
+          <div
+            className="h-px flex-1"
+            style={{
+              backgroundColor: lineColor,
+              marginRight: leftToRight ? 6 : 0,
+              marginLeft: leftToRight ? 0 : 6,
+            }}
+          />
+          <div
+            className={cn(
+              "h-0 w-0 border-y-[5px] border-y-transparent",
+              leftToRight
+                ? "border-l-[7px]"
+                : "border-r-[7px] rotate-180",
+            )}
+            style={{
+              borderLeftColor: leftToRight ? lineColor : undefined,
+              borderRightColor: !leftToRight ? lineColor : undefined,
+            }}
+            aria-hidden
+          />
+        </div>
       </div>
       {message.meta && renderMeta && (
         <div className="mt-2">{renderMeta(message.meta, message)}</div>
