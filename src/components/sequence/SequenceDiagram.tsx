@@ -586,6 +586,26 @@ export function MessageEdge({
     highlight.sequences.has(sequenceId);
 
   const lineColor = color ?? "hsl(215 16% 47%)";
+  const startDot = (
+    <div
+      className="h-[7px] w-[7px] rounded-full"
+      style={{ backgroundColor: lineColor }}
+      aria-hidden
+    />
+  );
+  const endArrow = (
+    <div
+      className={cn(
+        "h-0 w-0 border-y-[6px] border-y-transparent",
+        leftToRight ? "border-l-[9px]" : "border-r-[9px] rotate-180",
+      )}
+      style={{
+        borderLeftColor: leftToRight ? lineColor : undefined,
+        borderRightColor: !leftToRight ? lineColor : undefined,
+      }}
+      aria-hidden
+    />
+  );
 
   return (
     <div
@@ -620,27 +640,25 @@ export function MessageEdge({
           className="mt-1 flex items-center"
           style={{ opacity: active ? 0.9 : 0.4 }}
         >
-          <div
-            className="h-px flex-1"
-            style={{
-              backgroundColor: lineColor,
-              marginRight: leftToRight ? 6 : 0,
-              marginLeft: leftToRight ? 0 : 6,
-            }}
-          />
-          <div
-            className={cn(
-              "h-0 w-0 border-y-[5px] border-y-transparent",
-              leftToRight
-                ? "border-l-[7px]"
-                : "border-r-[7px] rotate-180",
-            )}
-            style={{
-              borderLeftColor: leftToRight ? lineColor : undefined,
-              borderRightColor: !leftToRight ? lineColor : undefined,
-            }}
-            aria-hidden
-          />
+          {leftToRight ? (
+            <>
+              {startDot}
+              <div
+                className="mx-1 h-px flex-1"
+                style={{ backgroundColor: lineColor }}
+              />
+              {endArrow}
+            </>
+          ) : (
+            <>
+              {endArrow}
+              <div
+                className="mx-1 h-px flex-1"
+                style={{ backgroundColor: lineColor }}
+              />
+              {startDot}
+            </>
+          )}
         </div>
       </div>
       {message.meta && renderMeta && (
