@@ -597,9 +597,13 @@ export function MessageEdge({
   const fromIdx = actorIndexMap[message.from] ?? 0;
   const toIdx = actorIndexMap[message.to] ?? fromIdx;
   const colWidth = 100 / Math.max(actorCount, 1);
-  const left = Math.min(fromIdx, toIdx) * colWidth + colWidth * 0.5;
-  const width = Math.max(Math.abs(toIdx - fromIdx) * colWidth, colWidth * 0.2);
   const leftToRight = toIdx >= fromIdx;
+  const startBias = leftToRight ? 0.75 : 0.25;
+  const endBias = leftToRight ? 0.25 : 0.75;
+  const startX = (fromIdx + startBias) * colWidth;
+  const endX = (toIdx + endBias) * colWidth;
+  const left = Math.min(startX, endX);
+  const width = Math.max(Math.abs(endX - startX), colWidth * 0.15);
   const styleMessageClass = message.messageClass
     ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
     : undefined;
