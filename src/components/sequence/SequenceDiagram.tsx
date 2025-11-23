@@ -291,6 +291,7 @@ function DiagramCanvas({
     .filter((actor) => actor.hasChildren && actor.expanded)
     .sort((a, b) => a.depth - b.depth);
   const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
+  const lastEndpoint = useMemo(() => new Map<string, number>(), []);
 
   return (
     <div
@@ -369,17 +370,21 @@ function DiagramCanvas({
 
           const toAnchor =
             layout.anchors[message.toActorId] * COLUMN_WIDTH;
-          const fromAnchor =
-            layout.anchors[message.fromActorId] * COLUMN_WIDTH;
-          const direction = toAnchor >= fromAnchor ? 1 : -1;
-          const fromX = getAnchor(
-            message.fromActorId,
-            direction > 0 ? "right" : "left",
-          );
+          const directionHint =
+            toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;
+          const previousFrom = lastEndpoint.get(message.fromActorId);
+          const fromX =
+            previousFrom ??
+            getAnchor(
+              message.fromActorId,
+              directionHint > 0 ? "right" : "left",
+            );
           const toX = getAnchor(
             message.toActorId,
-            direction > 0 ? "left" : "right",
+            directionHint > 0 ? "left" : "right",
           );
+          const direction = toX >= fromX ? 1 : -1;
+          lastEndpoint.set(message.toActorId, toX);
           const left = Math.min(fromX, toX);
           const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
           const stroke = "#111827"; // neutral black/near-black for all messages
