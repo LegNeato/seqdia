@@ -338,7 +338,7 @@ function DiagramCanvas({
           const stroke =
             selected || highlighted || activeActors.has(actor.actorId)
               ? base
-              : softColor(base, 90);
+              : softColor(base, 70);
 
           return (
             <div
