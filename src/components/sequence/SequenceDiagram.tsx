@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, GitCompare } from "lucide-react";
+import { ChevronDown, ChevronUp, GitCompare, ArrowRight } from "lucide-react";
 
 import {
   SequenceProvider,
@@ -569,7 +569,6 @@ export function MessageEdge({
 
   const left = Math.min(pos.fromX, pos.toX);
   const width = Math.max(Math.abs(pos.toX - pos.fromX), 8);
-  const leftToRight = pos.toX >= pos.fromX;
   const styleMessageClass = message.messageClass
     ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
     : undefined;
@@ -586,7 +585,6 @@ export function MessageEdge({
     highlight.sequences.has(sequenceId);
 
   const lineColor = color ?? "hsl(215 16% 47%)";
-  const labelBg = active ? "bg-white shadow-sm" : "bg-white/80";
 
   return (
     <div
@@ -600,39 +598,24 @@ export function MessageEdge({
       style={{ left: `${left}%`, width: `${width}%`, top: pos.y }}
       data-message-id={message.id}
     >
-      <div className="relative h-12">
+      <div className="relative">
         <div
-          className="absolute left-0 right-0 top-5 h-px"
-          style={{ backgroundColor: lineColor, opacity: active ? 1 : 0.4 }}
-        />
-        <div
-          className={cn(
-            "absolute left-1/2 top-0 -translate-x-1/2 rounded-full border px-2 py-1 text-xs font-semibold text-foreground transition",
-            labelBg,
-            active && "ring-1 ring-offset-1 ring-primary/60",
-          )}
-          style={{ borderColor: lineColor, color: lineColor }}
+          className="flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold"
+          style={{ color: lineColor }}
         >
-          <div className="flex items-center gap-1">
-            <span>{message.label}</span>
-            {message.messageClass &&
-              (renderMessageClass ? (
-                renderMessageClass(message.messageClass, message)
-              ) : (
-                <Badge variant="outline">{message.messageClass}</Badge>
-              ))}
-          </div>
+          <span>{message.label}</span>
+          <ArrowRight className="h-3 w-3" />
+          <span className="text-muted-foreground">{message.kind ?? "sync"}</span>
+          {message.messageClass &&
+            (renderMessageClass ? (
+              renderMessageClass(message.messageClass, message)
+            ) : (
+              <Badge variant="outline">{message.messageClass}</Badge>
+            ))}
         </div>
         <div
-          className={cn(
-            "absolute top-4 h-2 w-2 rotate-45 border",
-            active ? "bg-white" : "bg-white/80",
-          )}
-          style={{
-            left: leftToRight ? "calc(100% - 5px)" : "-3px",
-            borderColor: lineColor,
-          }}
-          aria-hidden
+          className="mt-1 h-px w-full"
+          style={{ backgroundColor: lineColor, opacity: active ? 0.9 : 0.4 }}
         />
       </div>
       {message.meta && renderMeta && (
