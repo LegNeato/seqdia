@@ -238,24 +238,35 @@ export function SequenceStage({
     message: SequenceMessage,
   ) => ReactNode;
 }) {
-  const { sequence } = useSequenceContext();
+  const { sequence, controller } = useSequenceContext();
+  const headerHeight = 64;
+  const expandedActors = sequence.actors.filter(
+    (actor) =>
+      actor.embeddedSequence &&
+      !controller.state.collapsedActors.has(actor.id),
+  );
+  const nestedHeight = expandedActors.length ? 260 : 0;
+  const messageOffset = headerHeight + (expandedActors.length ? nestedHeight + 16 : 16);
+  const stageMinHeight = messageOffset + layout.height;
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ minHeight: stageMinHeight }}>
       <ActorHeader layout={layout} renderActorLabel={renderActorLabel} />
       <NestedSequences
         layout={layout}
         renderActorLabel={renderActorLabel}
         renderMessageClass={renderMessageClass}
         renderMeta={renderMeta}
+        offsetTop={headerHeight}
+        height={nestedHeight}
       />
-      <div className="relative mt-10">
+      <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
         <div className="absolute inset-0">
           {sequence.actors.map((actor) => (
             <ActorLane key={actor.id} actor={actor} layout={layout} />
           ))}
         </div>
-        <div className="relative" style={{ height: layout.height }}>
+        <div className="relative h-full">
           {sequence.messages.map((message) => (
             <MessageEdge
               key={message.id}
@@ -359,6 +370,8 @@ export function NestedSequences({
   renderActorLabel,
   renderMessageClass,
   renderMeta,
+  offsetTop,
+  height,
 }: {
   layout: SequenceLayout;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
@@ -370,6 +383,8 @@ export function NestedSequences({
     meta: Record<string, string | number>,
     message: SequenceMessage,
   ) => ReactNode;
+  offsetTop?: number;
+  height?: number;
 }) {
   const { sequence, controller } = useSequenceContext();
   const expanded = sequence.actors.filter(
@@ -379,17 +394,20 @@ export function NestedSequences({
 
   if (!expanded.length) return null;
 
-  const panelHeight = 280;
+  const panelHeight = height ?? 260;
 
   return (
-    <div className="relative mt-6" style={{ height: panelHeight }}>
+    <div
+      className="absolute left-0 right-0"
+      style={{ top: offsetTop ?? 64, height: panelHeight }}
+    >
       {expanded.map((actor) => (
         <div
           key={actor.id}
           className="absolute z-10 -translate-x-1/2 transform"
           style={{
             left: `${layout.actorPositions[actor.id] ?? 0}%`,
-            width: "340px",
+            width: "520px",
           }}
         >
           <div className="rounded-lg border bg-background shadow-sm">
@@ -412,7 +430,7 @@ export function NestedSequences({
             <div className="p-2">
               <SequenceDiagram
                 sequence={actor.embeddedSequence as Sequence}
-                height={200}
+                height={panelHeight - 48}
                 showLegend={false}
                 renderActorLabel={renderActorLabel}
                 renderMessageClass={renderMessageClass}
