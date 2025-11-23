@@ -610,19 +610,22 @@ export function MessageEdge({
   return (
     <div
       className={cn(
-        "absolute px-1",
+        "absolute z-10 px-1 pointer-events-none",
         message.className,
         messageStyle,
         styleMessageClass,
-        active && "ring-2 ring-primary/50 ring-offset-2 bg-white/80",
+        active && "ring-2 ring-primary/50 ring-offset-2",
       )}
       style={{ left: `${left}%`, width: `${width}%`, top: pos.y }}
       data-message-id={message.id}
     >
       <div className="relative">
         <div
-          className="flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold"
-          style={{ color: lineColor }}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold bg-white/85 shadow-sm pointer-events-auto justify-center",
+            active && "ring-1 ring-primary/50 ring-offset-1",
+          )}
+          style={{ color: lineColor, marginInline: "auto" }}
         >
           <span>{message.label}</span>
           <ArrowRight
