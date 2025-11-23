@@ -16,6 +16,7 @@ import {
 import { useSequenceController } from "@/hooks/useSequenceController";
 import {
   type ActorNode,
+  defineLinearDiagram,
   type SequenceDiagramModel,
 } from "@/lib/sequence/types";
 
@@ -26,7 +27,7 @@ function collectActorIds(actors: ActorNode[]): string[] {
   ]);
 }
 
-const checkoutModel: SequenceDiagramModel = {
+const checkoutModel: SequenceDiagramModel = defineLinearDiagram({
   id: "checkout-sequence",
   title: "Checkout orchestration",
   description:
@@ -176,8 +177,8 @@ const checkoutModel: SequenceDiagramModel = {
       label: "Render receipt",
       rowIndex: 16,
     },
-  ],
-};
+  ] as const,
+});
 
 export default function Home() {
   const controller = useSequenceController(checkoutModel);

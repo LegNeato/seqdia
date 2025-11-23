@@ -58,7 +58,7 @@ function toSet(values?: Set<string> | string[]) {
 }
 
 function normalizeActors(
-  actors: ActorNode[],
+  actors: readonly ActorNode[],
   parentActorId: string | null = null,
   depth = 0,
 ): NormalizedActor[] {

@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 
 import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
 import { useSequenceController } from "@/hooks/useSequenceController";
-import { type SequenceDiagramModel } from "@/lib/sequence/types";
+import { defineLinearDiagram, type SequenceDiagramModel } from "@/lib/sequence/types";
 
-const model: SequenceDiagramModel = {
+const model: SequenceDiagramModel = defineLinearDiagram({
   id: "test-sequence",
   title: "Nested tree",
   actors: [
@@ -37,8 +37,8 @@ const model: SequenceDiagramModel = {
       toActorId: "leaf-b",
       label: "A -> B",
     },
-  ],
-};
+  ] as const,
+});
 
 function Harness() {
   const controller = useSequenceController(model);

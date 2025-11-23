@@ -4,7 +4,7 @@ export type ActorNode = {
   actorId: string;
   label: string;
   parentActorId?: string | null;
-  children?: ActorNode[];
+  children?: readonly ActorNode[];
   alignment?: ActorAlignment;
   /**
    * Optional style hints for label/line/region rendering.
@@ -37,7 +37,26 @@ export type SequenceDiagramModel = {
   id?: string;
   title?: string;
   description?: string;
-  actors: ActorNode[];
-  messages: SequenceMessage[];
+  actors: readonly ActorNode[];
+  messages: readonly SequenceMessage[];
   className?: string;
 };
+
+export type LinearMessages<
+  Ms extends readonly SequenceMessage[],
+  PrevTo extends string | null = null,
+> = Ms extends readonly [infer First, ...infer Rest]
+  ? First extends SequenceMessage
+    ? PrevTo extends null
+      ? [First, ...LinearMessages<Rest extends readonly SequenceMessage[] ? Rest : [], First["toActorId"]>]
+      : First["fromActorId"] extends PrevTo
+        ? [First, ...LinearMessages<Rest extends readonly SequenceMessage[] ? Rest : [], First["toActorId"]>]
+        : never
+    : never
+  : Ms;
+
+export function defineLinearDiagram<
+  M extends SequenceDiagramModel & { messages: readonly SequenceMessage[] },
+>(model: M & { messages: LinearMessages<M["messages"]> }): M {
+  return model;
+}
