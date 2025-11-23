@@ -463,15 +463,15 @@ export function ActorAnchor({
 
   return (
     <div
-      className="absolute flex w-40 -translate-x-1/2 flex-col items-center gap-1"
-      style={{ left: `${x}%` }}
+      className="absolute flex w-44 -translate-x-1/2 flex-col items-center gap-1"
+      style={{ left: `${x}%`, top: actor.parentId ? 10 : 0 }}
     >
       <button
         className={cn(
-          "flex min-h-10 w-full items-center justify-center gap-2 rounded-full border bg-background px-3 py-2 text-sm font-medium shadow-sm transition hover:-translate-y-[1px] hover:shadow",
+          "flex min-h-8 w-full items-center justify-center gap-2 rounded-md bg-transparent px-2 py-1 text-sm font-semibold transition hover:underline",
           actorStyle,
           actor.className,
-          isHighlighted && "ring-2 ring-primary/50 ring-offset-1",
+          isHighlighted && "text-primary underline",
         )}
         onClick={
           hasChild ? () => controller.api.toggleActor(actor.id) : undefined
