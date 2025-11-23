@@ -335,16 +335,22 @@ function DiagramCanvas({
           const highlighted = highlight.actors.has(actor.actorId);
           const selected = selection.actors.has(actor.actorId);
           const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-          const stroke =
-            selected || highlighted || activeActors.has(actor.actorId)
-              ? base
-              : softColor(base, 70);
+          const active =
+            selected || highlighted || activeActors.has(actor.actorId);
+          const stroke = active ? base : softColor(base, 70);
 
           return (
             <div
               key={`line-${actor.actorId}`}
-              className="absolute inset-y-0 w-[2px]"
-              style={{ left: x, backgroundColor: stroke }}
+              className={cn(
+                "absolute inset-y-0 w-[2px]",
+                !active && "border-l border-dashed",
+              )}
+              style={{
+                left: x,
+                backgroundColor: active ? stroke : undefined,
+                borderColor: active ? undefined : stroke,
+              }}
             />
           );
         })}
