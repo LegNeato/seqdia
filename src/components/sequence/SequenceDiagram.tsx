@@ -34,6 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
 type SequenceDiagramProps = {
@@ -157,7 +158,8 @@ function SequenceStage({ layout }: { layout: SequenceLayout }) {
   return (
     <div className="relative">
       <ActorHeader layout={layout} />
-      <div className="relative mt-16">
+      <NestedSequences layout={layout} />
+      <div className="relative mt-10">
         <div className="absolute inset-0">
           {sequence.actors.map((actor) => (
             <ActorLane key={actor.id} actor={actor} layout={layout} />
@@ -235,21 +237,59 @@ function ActorAnchor({ actor, x }: { actor: SequenceActor; x: number }) {
       {actor.subtitle && (
         <p className="text-[11px] text-muted-foreground">{actor.subtitle}</p>
       )}
-      {hasChild && !collapsed && actor.embeddedSequence && (
-        <div className="z-20 mt-2 w-[320px] rounded-lg border bg-background/95 p-3 text-left shadow-lg backdrop-blur">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            Nested sequence
-            <Badge variant="secondary" className="text-[11px]">
-              {actor.embeddedSequence.label ?? actor.embeddedSequence.id}
-            </Badge>
+    </div>
+  );
+}
+
+function NestedSequences({ layout }: { layout: SequenceLayout }) {
+  const { sequence, controller } = useSequenceContext();
+  const expanded = sequence.actors.filter(
+    (actor) =>
+      actor.embeddedSequence && !controller.state.collapsedActors.has(actor.id),
+  );
+
+  if (!expanded.length) return null;
+
+  const panelHeight = 280;
+
+  return (
+    <div className="relative mt-6" style={{ height: panelHeight }}>
+      {expanded.map((actor) => (
+        <div
+          key={actor.id}
+          className="absolute z-10 -translate-x-1/2 transform"
+          style={{
+            left: `${layout.actorPositions[actor.id] ?? 0}%`,
+            width: "340px",
+          }}
+        >
+          <div className="rounded-lg border bg-background shadow-sm">
+            <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                Nested: {actor.label}
+                <Badge variant="secondary" className="text-[11px]">
+                  {actor.embeddedSequence?.label ?? actor.embeddedSequence?.id}
+                </Badge>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[11px]"
+                onClick={() => controller.api.collapseActor(actor.id)}
+              >
+                Collapse
+              </Button>
+            </div>
+            <div className="p-2">
+              <SequenceDiagram
+                sequence={actor.embeddedSequence as Sequence}
+                height={200}
+                showLegend={false}
+              />
+            </div>
           </div>
-          <SequenceDiagram
-            sequence={actor.embeddedSequence}
-            height={220}
-            showLegend={false}
-          />
         </div>
-      )}
+      ))}
     </div>
   );
 }
