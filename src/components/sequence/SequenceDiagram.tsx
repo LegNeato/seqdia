@@ -347,40 +347,45 @@ export function SequenceStage({
   const stageMinHeight = messageOffset + layout.height;
 
   return (
-    <div className="relative" style={{ minHeight: stageMinHeight }}>
-      <ActorHeader
-        layout={layout}
-        renderActorLabel={renderActorLabel}
-        actors={viewSequence.actors}
-        actorColors={actorColors}
-      />
-      <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
-        <div className="absolute inset-0">
-          {viewSequence.actors.map((actor) => (
-            <ActorLane
-              key={actor.id}
-              actor={actor}
-              layout={layout}
-              color={actorColors[actor.id]}
-            />
-          ))}
-        </div>
-        <div className="relative h-full">
-          {viewSequence.messages.map((message) => (
-            <MessageEdge
-              key={message.id}
-              message={message}
-              layout={layout}
-              sequenceId={viewSequence.id}
-              renderMessageClass={renderMessageClass}
-              renderMeta={renderMeta}
-              color={
-                actorColors[message.from] ??
-                actorColors[message.to] ??
-                ACTOR_COLORS[0]
-              }
-            />
-          ))}
+    <div
+      className="relative w-full overflow-x-auto"
+      style={{ minHeight: stageMinHeight }}
+    >
+      <div className="min-w-full">
+        <ActorHeader
+          layout={layout}
+          renderActorLabel={renderActorLabel}
+          actors={viewSequence.actors}
+          actorColors={actorColors}
+        />
+        <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
+          <div className="absolute inset-0">
+            {viewSequence.actors.map((actor) => (
+              <ActorLane
+                key={actor.id}
+                actor={actor}
+                layout={layout}
+                color={actorColors[actor.id]}
+              />
+            ))}
+          </div>
+          <div className="relative h-full">
+            {viewSequence.messages.map((message) => (
+              <MessageEdge
+                key={message.id}
+                message={message}
+                layout={layout}
+                sequenceId={viewSequence.id}
+                renderMessageClass={renderMessageClass}
+                renderMeta={renderMeta}
+                color={
+                  actorColors[message.from] ??
+                  actorColors[message.to] ??
+                  ACTOR_COLORS[0]
+                }
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

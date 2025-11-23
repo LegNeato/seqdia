@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSequenceController } from "@/hooks/useSequenceController";
-import { type Sequence, type SequenceActor } from "@/lib/sequence/types";
+import { type Sequence } from "@/lib/sequence/types";
 
 const paymentsSubsequence: Sequence = {
   id: "payments-subflow",
@@ -211,21 +211,6 @@ const checkoutSequence: Sequence = {
 
 export default function Home() {
   const controller = useSequenceController(checkoutSequence);
-  const actorLabel = (actor: SequenceActor) => (
-    <div className="flex w-full items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <Layers3 className="h-4 w-4 text-muted-foreground" />
-        <div className="flex flex-col text-left leading-tight">
-          <span className="text-sm font-semibold">{actor.label}</span>
-          {actor.subtitle && (
-            <span className="text-[11px] text-muted-foreground">
-              {actor.subtitle}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   useEffect(() => {
     controller.api.setMessageClassStyle(
@@ -322,7 +307,6 @@ export default function Home() {
         <SequenceDiagram
           sequence={checkoutSequence}
           controller={controller}
-          renderActorLabel={actorLabel}
         />
 
         <Card>
