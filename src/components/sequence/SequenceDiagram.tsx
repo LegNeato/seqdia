@@ -197,7 +197,7 @@ function SequenceSurface({
   }, [viewSequence.actors]);
   const actorCount = viewSequence.actors.length || 1;
   const columnTemplate = useMemo(
-    () => `repeat(${actorCount}, minmax(140px, 1fr))`,
+    () => `repeat(${actorCount}, minmax(180px, 1fr))`,
     [actorCount],
   );
   const actorColors = useMemo(() => {
@@ -374,7 +374,7 @@ export function SequenceStage({
   messageY: Record<string, number>;
 }) {
   const headerHeight = 80;
-  const messageOffset = headerHeight + 24;
+  const messageOffset = headerHeight + 28;
   const stageMinHeight = messageOffset + layout.height;
 
   return (
@@ -382,7 +382,7 @@ export function SequenceStage({
       className="relative w-full overflow-x-auto"
       style={{ minHeight: stageMinHeight }}
     >
-      <div className="min-w-full grid gap-x-6" style={{ gridTemplateColumns: columnTemplate }}>
+      <div className="min-w-full grid gap-x-0" style={{ gridTemplateColumns: columnTemplate }}>
         <ActorHeader
           renderActorLabel={renderActorLabel}
           actors={viewSequence.actors}
@@ -491,7 +491,7 @@ export function ActorAnchor({
     <div className="flex w-full flex-col items-center gap-1">
       <button
         className={cn(
-          "flex min-h-8 w-full items-center justify-center gap-2 rounded-md bg-transparent px-2 py-1 text-sm font-semibold transition hover:underline",
+          "flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-transparent px-3 py-2 text-sm font-semibold transition hover:underline text-center",
           actorStyle,
           actor.className,
           isHighlighted && "text-primary underline",
