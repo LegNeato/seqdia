@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SeqDia
 
-## Getting Started
+Interactive, hook-first sequence diagrams for React/Next.js with Tailwind, shadcn/ui styling, and optional D3 spacing. It is built to be composed: highlight any actor/message/class from code, override styles at runtime, and expand nested actors into embedded sequences.
 
-First, run the development server:
+## Highlights
+
+- Hook-driven control surface (`useSequenceController`, `useSequenceApi`) with functions to highlight or style actors, messages, message classes, or entire sequences.
+- Composable primitives powered by Tailwind + shadcn/ui; bring your own layout or drop in `SequenceDiagram`.
+- Nested actors: attach an embedded `Sequence` to an actor and expand/collapse on demand.
+- Message class theming: style by class name (e.g., `warning`, `success`) or per message/actor.
+- Tested with Vitest + Testing Library; layout spacing uses `d3-scale` under the hood.
+- Dual-licensed MIT or Apache-2.0 for OSS compatibility.
+
+## Quick start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Define your data and drive the diagram with the controller:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```tsx
+import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
+import { useSequenceController } from "@/hooks/useSequenceController";
+import type { Sequence } from "@/lib/sequence/types";
 
-## Learn More
+const sequence: Sequence = {
+  id: "checkout",
+  label: "Checkout orchestration",
+  actors: [
+    { id: "client", label: "Client" },
+    {
+      id: "payments",
+      label: "Payments",
+      embeddedSequence: {
+        id: "payments-sub",
+        actors: [
+          { id: "payments", label: "Payments" },
+          { id: "stripe", label: "Stripe" },
+        ],
+        messages: [
+          { id: "sub-1", from: "payments", to: "stripe", label: "Create intent", messageClass: "info" },
+        ],
+      },
+      defaultCollapsed: true,
+    },
+    { id: "db", label: "DB" },
+  ],
+  messages: [
+    { id: "m1", from: "client", to: "payments", label: "Init", messageClass: "info" },
+    { id: "m2", from: "payments", to: "db", label: "Persist intent", messageClass: "warning", kind: "async" },
+  ],
+};
 
-To learn more about Next.js, take a look at the following resources:
+export function CheckoutDiagram() {
+  const controller = useSequenceController(sequence);
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  return (
+    <>
+      <button onClick={() => controller.api.highlightMessageClass("warning")}>
+        Highlight warnings
+      </button>
+      <SequenceDiagram sequence={sequence} controller={controller} />
+    </>
+  );
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Controller API (selected)
 
-## Deploy on Vercel
+- `highlightActor(id | id[])`, `highlightMessage(id | id[])`, `highlightMessageClass(name | name[])`, `highlightSequence(id | id[])`
+- `clearHighlights()`
+- `setActorStyle(id, className)`, `setMessageStyle(id, className)`, `setMessageClassStyle(name, className)`, `setSequenceStyle(id, className)`
+- `toggleActor(id)`, `expandActor(id)`, `collapseActor(id)`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For components nested under `SequenceDiagram`, use `useSequenceApi(onReady?)` to grab the same API without manually passing the controller.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Types
+
+See `src/lib/sequence/types.ts` for `Sequence`, `SequenceActor`, and `SequenceMessage` definitions. Every message can carry a `messageClass`, `kind` (`sync | async | return | note`), optional `description`, and `meta` map.
+
+## Testing
+
+```bash
+npm test        # vitest run
+npm run lint    # eslint
+```
+
+## License
+
+Dual-licensed under MIT and Apache-2.0. Choose the license that fits your project:
+
+- `LICENSE-MIT`
+- `LICENSE-APACHE`
+
+## Contributing
+
+Issues and PRs are welcome. Keep changes covered with tests and update docs alongside new behaviors.
