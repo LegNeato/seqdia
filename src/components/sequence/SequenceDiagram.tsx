@@ -20,7 +20,11 @@ import {
 } from "@/hooks/useSequenceController";
 import { computeLayout, type SequenceLayout } from "@/lib/sequence/layout";
 import { cn } from "@/lib/utils";
-import type { Sequence, SequenceActor, SequenceMessage } from "@/lib/sequence/types";
+import type {
+  Sequence,
+  SequenceActor,
+  SequenceMessage,
+} from "@/lib/sequence/types";
 import { Badge } from "../ui/badge";
 import {
   Card,
@@ -29,8 +33,80 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
+
+type ViewSequence = Sequence & { actors: SequenceActor[]; messages: SequenceMessage[] };
+
+type ExpandResult = {
+  sequence: ViewSequence;
+  entryId?: string;
+};
+
+function expandSequenceView(
+  sequence: Sequence,
+  collapsedActors: Set<string>,
+  prefix = "",
+): ExpandResult {
+  const actors: SequenceActor[] = [];
+  const messages: SequenceMessage[] = [];
+  const actorIdMap: Record<string, string> = {};
+
+  sequence.actors.forEach((actor) => {
+    if (actor.embeddedSequence && !collapsedActors.has(actor.id)) {
+      const expanded = expandSequenceView(
+        actor.embeddedSequence,
+        collapsedActors,
+        `${prefix}${actor.id}.`,
+      );
+      const entryId =
+        expanded.sequence.actors[0]?.id ?? `${prefix}${actor.id}`;
+      actorIdMap[actor.id] = entryId;
+      expanded.sequence.actors.forEach((child) => {
+        actors.push({
+          ...child,
+          parentId: actor.id,
+          originId: child.originId ?? child.id,
+        });
+      });
+      expanded.sequence.messages.forEach((message) => {
+        messages.push({
+          ...message,
+          parentId: actor.id,
+          originId: message.originId ?? message.id,
+        });
+      });
+    } else {
+      const id = `${prefix}${actor.id}`;
+      actorIdMap[actor.id] = id;
+      actors.push({
+        ...actor,
+        id,
+        originId: actor.originId ?? actor.id,
+      });
+    }
+  });
+
+  sequence.messages.forEach((message) => {
+    const from = actorIdMap[message.from] ?? `${prefix}${message.from}`;
+    const to = actorIdMap[message.to] ?? `${prefix}${message.to}`;
+    messages.push({
+      ...message,
+      id: `${prefix}${message.id}`,
+      originId: message.originId ?? message.id,
+      from,
+      to,
+    });
+  });
+
+  return {
+    sequence: {
+      ...sequence,
+      actors,
+      messages,
+    },
+    entryId: actors[0]?.id,
+  };
+}
 
 type SequenceDiagramProps = {
   sequence: Sequence;
@@ -103,32 +179,36 @@ function SequenceSurface({
 }: SurfaceProps) {
   const { sequence, controller } = useSequenceContext();
   useSequenceApi(onReady);
+  const viewSequence = useMemo(
+    () => expandSequenceView(sequence, controller.state.collapsedActors).sequence,
+    [controller.state.collapsedActors, sequence],
+  );
   const layout = useMemo(
-    () => computeLayout(sequence, { height }),
-    [height, sequence],
+    () => computeLayout(viewSequence, { height }),
+    [height, viewSequence],
   );
 
   const uniqueMessageClasses = useMemo(
     () =>
       Array.from(
         new Set(
-          sequence.messages
+          viewSequence.messages
             .map((message) => message.messageClass)
             .filter(Boolean) as string[],
         ),
       ),
-    [sequence.messages],
+    [viewSequence.messages],
   );
 
   const messageClassSamples = useMemo(() => {
     const map: Record<string, SequenceMessage | undefined> = {};
-    sequence.messages.forEach((message) => {
+    viewSequence.messages.forEach((message) => {
       if (message.messageClass && !map[message.messageClass]) {
         map[message.messageClass] = message;
       }
     });
     return map;
-  }, [sequence.messages]);
+  }, [viewSequence.messages]);
 
   const sequenceStyle = controller.state.styles.sequences[sequence.id];
   const sequenceHighlighted = controller.state.highlight.sequences.has(
@@ -182,6 +262,7 @@ function SequenceSurface({
       <CardContent className="pb-6">
         <SequenceStage
           layout={layout}
+          viewSequence={viewSequence}
           renderActorLabel={renderActorLabel}
           renderMessageClass={renderMessageClass}
           renderMeta={renderMeta}
@@ -223,11 +304,13 @@ export function SequenceLegend({
 
 export function SequenceStage({
   layout,
+  viewSequence,
   renderActorLabel,
   renderMessageClass,
   renderMeta,
 }: {
   layout: SequenceLayout;
+  viewSequence: ViewSequence;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
   renderMessageClass?: (
     messageClass: string,
@@ -238,41 +321,30 @@ export function SequenceStage({
     message: SequenceMessage,
   ) => ReactNode;
 }) {
-  const { sequence, controller } = useSequenceContext();
   const headerHeight = 64;
-  const expandedActors = sequence.actors.filter(
-    (actor) =>
-      actor.embeddedSequence &&
-      !controller.state.collapsedActors.has(actor.id),
-  );
-  const nestedHeight = expandedActors.length ? 260 : 0;
-  const messageOffset = headerHeight + (expandedActors.length ? nestedHeight + 16 : 16);
+  const messageOffset = headerHeight + 16;
   const stageMinHeight = messageOffset + layout.height;
 
   return (
     <div className="relative" style={{ minHeight: stageMinHeight }}>
-      <ActorHeader layout={layout} renderActorLabel={renderActorLabel} />
-      <NestedSequences
+      <ActorHeader
         layout={layout}
         renderActorLabel={renderActorLabel}
-        renderMessageClass={renderMessageClass}
-        renderMeta={renderMeta}
-        offsetTop={headerHeight}
-        height={nestedHeight}
+        actors={viewSequence.actors}
       />
       <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
         <div className="absolute inset-0">
-          {sequence.actors.map((actor) => (
+          {viewSequence.actors.map((actor) => (
             <ActorLane key={actor.id} actor={actor} layout={layout} />
           ))}
         </div>
         <div className="relative h-full">
-          {sequence.messages.map((message) => (
+          {viewSequence.messages.map((message) => (
             <MessageEdge
               key={message.id}
               message={message}
               layout={layout}
-              sequenceId={sequence.id}
+              sequenceId={viewSequence.id}
               renderMessageClass={renderMessageClass}
               renderMeta={renderMeta}
             />
@@ -286,15 +358,15 @@ export function SequenceStage({
 export function ActorHeader({
   layout,
   renderActorLabel,
+  actors,
 }: {
   layout: SequenceLayout;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
+  actors: SequenceActor[];
 }) {
-  const { sequence } = useSequenceContext();
-
   return (
     <div className="relative h-16">
-      {sequence.actors.map((actor) => (
+      {actors.map((actor) => (
         <ActorAnchor
           key={actor.id}
           actor={actor}
@@ -321,8 +393,15 @@ export function ActorAnchor({
   const collapsed = collapsedActors.has(actor.id);
   const isHighlighted =
     highlight.actors.has(actor.id) ||
+    (actor.originId && highlight.actors.has(actor.originId)) ||
+    (actor.parentId && highlight.actors.has(actor.parentId)) ||
     (actor.embeddedSequence &&
       highlight.sequences.has(actor.embeddedSequence.id));
+
+  const actorStyle =
+    styles.actors[actor.id] ??
+    (actor.originId ? styles.actors[actor.originId] : undefined) ??
+    (actor.parentId ? styles.actors[actor.parentId] : undefined);
 
   return (
     <div
@@ -332,7 +411,7 @@ export function ActorAnchor({
       <button
         className={cn(
           "flex min-h-10 w-full items-center justify-center gap-2 rounded-full border bg-background px-3 py-2 text-sm font-medium shadow-sm transition hover:-translate-y-[1px] hover:shadow",
-          styles.actors[actor.id],
+          actorStyle,
           actor.className,
           isHighlighted && "ring-2 ring-primary/50 ring-offset-1",
         )}
@@ -365,85 +444,6 @@ export function ActorAnchor({
   );
 }
 
-export function NestedSequences({
-  layout,
-  renderActorLabel,
-  renderMessageClass,
-  renderMeta,
-  offsetTop,
-  height,
-}: {
-  layout: SequenceLayout;
-  renderActorLabel?: (actor: SequenceActor) => ReactNode;
-  renderMessageClass?: (
-    messageClass: string,
-    message: SequenceMessage,
-  ) => ReactNode;
-  renderMeta?: (
-    meta: Record<string, string | number>,
-    message: SequenceMessage,
-  ) => ReactNode;
-  offsetTop?: number;
-  height?: number;
-}) {
-  const { sequence, controller } = useSequenceContext();
-  const expanded = sequence.actors.filter(
-    (actor) =>
-      actor.embeddedSequence && !controller.state.collapsedActors.has(actor.id),
-  );
-
-  if (!expanded.length) return null;
-
-  const panelHeight = height ?? 260;
-
-  return (
-    <div
-      className="absolute left-0 right-0"
-      style={{ top: offsetTop ?? 64, height: panelHeight }}
-    >
-      {expanded.map((actor) => (
-        <div
-          key={actor.id}
-          className="absolute z-10 -translate-x-1/2 transform"
-          style={{
-            left: `${layout.actorPositions[actor.id] ?? 0}%`,
-            width: "520px",
-          }}
-        >
-          <div className="rounded-lg border bg-background shadow-sm">
-            <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                Nested: {renderActorLabel ? renderActorLabel(actor) : actor.label}
-                <Badge variant="secondary" className="text-[11px]">
-                  {actor.embeddedSequence?.label ?? actor.embeddedSequence?.id}
-                </Badge>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-[11px]"
-                onClick={() => controller.api.collapseActor(actor.id)}
-              >
-                Collapse
-              </Button>
-            </div>
-            <div className="p-2">
-              <SequenceDiagram
-                sequence={actor.embeddedSequence as Sequence}
-                height={panelHeight - 48}
-                showLegend={false}
-                renderActorLabel={renderActorLabel}
-                renderMessageClass={renderMessageClass}
-                renderMeta={renderMeta}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function ActorLane({
   actor,
   layout,
@@ -453,7 +453,14 @@ export function ActorLane({
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
-  const isHighlighted = highlight.actors.has(actor.id);
+  const isHighlighted =
+    highlight.actors.has(actor.id) ||
+    (actor.originId && highlight.actors.has(actor.originId)) ||
+    (actor.parentId && highlight.actors.has(actor.parentId));
+  const actorStyle =
+    styles.actors[actor.id] ??
+    (actor.originId ? styles.actors[actor.originId] : undefined) ??
+    (actor.parentId ? styles.actors[actor.parentId] : undefined);
   const x = layout.actorPositions[actor.id] ?? 0;
 
   return (
@@ -465,7 +472,7 @@ export function ActorLane({
         className={cn(
           "h-full w-0.5 rounded-full bg-border",
           actor.laneClassName,
-          styles.actors[actor.id],
+          actorStyle,
           isHighlighted && "bg-primary/50 shadow-[0_0_0_2px_rgba(59,130,246,0.35)]",
         )}
         aria-hidden
@@ -502,9 +509,17 @@ export function MessageEdge({
   const left = Math.min(pos.fromX, pos.toX);
   const width = Math.max(Math.abs(pos.toX - pos.fromX), 8);
   const leftToRight = pos.toX >= pos.fromX;
+  const styleMessageClass = message.messageClass
+    ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
+    : undefined;
+  const messageStyle =
+    styles.messages[message.id] ??
+    (message.originId ? styles.messages[message.originId] : undefined);
   const active =
     highlight.messages.has(message.id) ||
+    (message.originId && highlight.messages.has(message.originId)) ||
     (message.messageClass && highlight.messageClasses.has(message.messageClass)) ||
+    (message.originId && highlight.messageClasses.has(message.originId)) ||
     highlight.actors.has(message.from) ||
     highlight.actors.has(message.to) ||
     highlight.sequences.has(sequenceId);
@@ -514,10 +529,8 @@ export function MessageEdge({
       className={cn(
         "absolute flex flex-col gap-2 rounded-lg border bg-white/85 px-3 py-2 text-sm shadow-sm backdrop-blur transition",
         message.className,
-        styles.messages[message.id],
-        message.messageClass
-          ? styles.messageClasses[message.messageClass]
-          : undefined,
+        messageStyle,
+        styleMessageClass,
         active && "ring-2 ring-primary/60 shadow-md bg-primary/5",
       )}
       style={{

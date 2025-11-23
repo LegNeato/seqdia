@@ -13,6 +13,14 @@ export interface SequenceMessage {
   from: string;
   to: string;
   label: string;
+  /**
+   * Optional identifier of the source message when the diagram expands nested sequences.
+   */
+  originId?: string;
+  /**
+   * Parent actor id if this message was lifted from an embedded sequence.
+   */
+  parentId?: string;
   description?: string;
   messageClass?: MessageClass;
   kind?: MessageKind;
@@ -23,6 +31,14 @@ export interface SequenceMessage {
 export interface SequenceActor {
   id: string;
   label: string;
+  /**
+   * Optional identifier of the source actor when the diagram expands nested sequences.
+   */
+  originId?: string;
+  /**
+   * Parent actor id if this actor originated from an embedded sequence.
+   */
+  parentId?: string;
   subtitle?: string;
   className?: string;
   laneClassName?: string;

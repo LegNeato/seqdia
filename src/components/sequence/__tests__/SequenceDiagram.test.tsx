@@ -82,13 +82,13 @@ describe("SequenceDiagram", () => {
     const user = userEvent.setup();
 
     expect(
-      document.querySelector('[data-sequence-id="child-sequence"]'),
+      document.querySelector('[data-message-id="actor-b.child-msg"]'),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByText("expand nested"));
 
     expect(
-      document.querySelector('[data-sequence-id="child-sequence"]'),
+      document.querySelector('[data-message-id="actor-b.child-msg"]'),
     ).toBeInTheDocument();
   });
 });
