@@ -621,33 +621,37 @@ export function MessageEdge({
     >
       <div className="relative">
         <div
-          className={cn(
-            "inline-flex items-center gap-2 rounded-md px-3 py-1 text-xs font-semibold bg-white/85 shadow-sm pointer-events-auto justify-center",
-            active && "ring-1 ring-primary/50 ring-offset-1",
-          )}
-          style={{ color: lineColor, marginInline: "auto" }}
+          className="absolute left-1/2 top-[-18px] -translate-x-1/2 pointer-events-auto"
+          style={{ color: lineColor }}
         >
-          <span>{message.label}</span>
-          <ArrowRight
-            className={cn("h-3 w-3", !leftToRight && "rotate-180")}
-          />
-          <span className="text-muted-foreground">{message.kind ?? "sync"}</span>
-          {message.messageClass &&
-            (renderMessageClass ? (
-              renderMessageClass(message.messageClass, message)
-            ) : (
-              <Badge variant="outline">{message.messageClass}</Badge>
-            ))}
+          <div
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold bg-white/90 shadow-sm",
+              active && "ring-1 ring-primary/50 ring-offset-1",
+            )}
+          >
+            <span>{message.label}</span>
+            <ArrowRight className={cn("h-3 w-3", !leftToRight && "rotate-180")} />
+            <span className="text-muted-foreground">
+              {message.kind ?? "sync"}
+            </span>
+            {message.messageClass &&
+              (renderMessageClass ? (
+                renderMessageClass(message.messageClass, message)
+              ) : (
+                <Badge variant="outline">{message.messageClass}</Badge>
+              ))}
+          </div>
         </div>
         <div
-          className="mt-1 flex items-center"
-          style={{ opacity: active ? 0.9 : 0.4 }}
+          className="flex items-center"
+          style={{ opacity: active ? 0.9 : 0.45 }}
         >
           {leftToRight ? (
             <>
               {startDot}
               <div
-                className="mx-1 h-px flex-1"
+                className="mx-1 h-[2px] flex-1"
                 style={{ backgroundColor: lineColor }}
               />
               {endArrow}
@@ -656,7 +660,7 @@ export function MessageEdge({
             <>
               {endArrow}
               <div
-                className="mx-1 h-px flex-1"
+                className="mx-1 h-[2px] flex-1"
                 style={{ backgroundColor: lineColor }}
               />
               {startDot}
