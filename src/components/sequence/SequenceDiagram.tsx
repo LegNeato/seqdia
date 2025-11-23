@@ -374,7 +374,7 @@ export function SequenceStage({
   messageY: Record<string, number>;
 }) {
   const headerHeight = 80;
-  const messageOffset = headerHeight + 16;
+  const messageOffset = headerHeight + 24;
   const stageMinHeight = messageOffset + layout.height;
 
   return (
@@ -384,7 +384,6 @@ export function SequenceStage({
     >
       <div className="min-w-full grid gap-x-6" style={{ gridTemplateColumns: columnTemplate }}>
         <ActorHeader
-          layout={layout}
           renderActorLabel={renderActorLabel}
           actors={viewSequence.actors}
           actorColors={actorColors}
@@ -429,14 +428,12 @@ export function SequenceStage({
 }
 
 export function ActorHeader({
-  layout,
   renderActorLabel,
   actors,
   actorColors,
   actorIndexMap,
   columnTemplate,
 }: {
-  layout: SequenceLayout;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
   actors: SequenceActor[];
   actorColors: Record<string, string>;
@@ -456,7 +453,6 @@ export function ActorHeader({
         >
           <ActorAnchor
             actor={actor}
-            x={layout.actorPositions[actor.id]}
             renderActorLabel={renderActorLabel}
             color={actorColors[actor.id]}
           />
@@ -468,12 +464,10 @@ export function ActorHeader({
 
 export function ActorAnchor({
   actor,
-  x,
   renderActorLabel,
   color,
 }: {
   actor: SequenceActor;
-  x: number;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
   color?: string;
 }) {
@@ -494,10 +488,7 @@ export function ActorAnchor({
     (actor.parentId ? styles.actors[actor.parentId] : undefined);
 
   return (
-    <div
-      className="absolute flex w-44 -translate-x-1/2 flex-col items-center gap-1"
-      style={{ left: `${x}%`, top: actor.parentId ? 10 : 0 }}
-    >
+    <div className="flex w-full flex-col items-center gap-1">
       <button
         className={cn(
           "flex min-h-8 w-full items-center justify-center gap-2 rounded-md bg-transparent px-2 py-1 text-sm font-semibold transition hover:underline",
@@ -653,14 +644,14 @@ export function MessageEdge({
         message.className,
         messageStyle,
         styleMessageClass,
-        active && "ring-2 ring-primary/50 ring-offset-2",
       )}
       style={{ left: `${left}%`, width: `${width}%`, top: messageY }}
       data-message-id={message.id}
+      data-active={active}
     >
       <div className="relative">
         <div
-          className="absolute left-1/2 top-[-18px] -translate-x-1/2 pointer-events-auto"
+          className="absolute left-1/2 top-[-22px] -translate-x-1/2 pointer-events-auto"
           style={{ color: lineColor }}
         >
           <div

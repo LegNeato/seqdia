@@ -74,7 +74,7 @@ describe("SequenceDiagram", () => {
 
     const message = document.querySelector('[data-message-id="m2"]');
     expect(message).toBeInTheDocument();
-    expect(message?.className).toContain("ring-2");
+    expect(message?.getAttribute("data-active")).toBe("true");
   });
 
   it("expands nested actor sequences", async () => {
