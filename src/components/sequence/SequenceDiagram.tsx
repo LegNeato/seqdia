@@ -278,6 +278,14 @@ function DiagramCanvas({
 
   const viewWidth = layout.leafCount * COLUMN_WIDTH;
   const height = layout.messageAreaHeight;
+  const activeActors = useMemo(() => {
+    const set = new Set<string>();
+    layout.messages.forEach(({ message }) => {
+      set.add(message.fromActorId);
+      set.add(message.toActorId);
+    });
+    return set;
+  }, [layout.messages]);
 
   const regionNodes = [...layout.visibleActors]
     .filter((actor) => actor.hasChildren && actor.expanded)
@@ -327,11 +335,10 @@ function DiagramCanvas({
           const highlighted = highlight.actors.has(actor.actorId);
           const selected = selection.actors.has(actor.actorId);
           const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-          const stroke = selected
-            ? base
-            : highlighted
+          const stroke =
+            selected || highlighted || activeActors.has(actor.actorId)
               ? base
-              : base;
+              : softColor(base, 90);
 
           return (
             <div
