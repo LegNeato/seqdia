@@ -12,6 +12,7 @@ This PRD defines a React + TypeScript architecture for interactive sequence diag
 - Highlighting and selection  
 - Grid / tree based layout  
 - Pure React components (no SVG) for lines/regions/messages  
+- Linear message sequences: each message must start where the previous one ended  
 
 Assumptions:
 

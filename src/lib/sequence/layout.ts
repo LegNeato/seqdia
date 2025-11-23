@@ -167,6 +167,16 @@ export function computeLayout(
   const rowHeight = options.messageRowHeight ?? 76;
   const rowPadding = options.messageRowPadding ?? 18;
 
+  let previousTo: string | null = null;
+  model.messages.forEach((message, idx) => {
+    if (previousTo !== null && message.fromActorId !== previousTo) {
+      throw new Error(
+        `Message sequence must be linear: message "${message.messageId}" starts at "${message.fromActorId}" but previous ended at "${previousTo}" (index ${idx})`,
+      );
+    }
+    previousTo = message.toActorId;
+  });
+
   const normalizedActors = normalizeActors(model.actors);
   const expandedActors = deriveExpandedActorIds(
     normalizedActors,

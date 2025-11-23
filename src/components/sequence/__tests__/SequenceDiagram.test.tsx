@@ -33,7 +33,7 @@ const model: SequenceDiagramModel = {
     },
     {
       messageId: "m2",
-      fromActorId: "leaf-a",
+      fromActorId: "branch",
       toActorId: "leaf-b",
       label: "A -> B",
     },
