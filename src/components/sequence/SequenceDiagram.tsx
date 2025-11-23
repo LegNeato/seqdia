@@ -188,6 +188,18 @@ function SequenceSurface({
     () => expandSequenceView(sequence, controller.state.collapsedActors).sequence,
     [controller.state.collapsedActors, sequence],
   );
+  const actorIndexMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    viewSequence.actors.forEach((actor, index) => {
+      map[actor.id] = index;
+    });
+    return map;
+  }, [viewSequence.actors]);
+  const actorCount = viewSequence.actors.length || 1;
+  const columnTemplate = useMemo(
+    () => `repeat(${actorCount}, minmax(140px, 1fr))`,
+    [actorCount],
+  );
   const actorColors = useMemo(() => {
     const originOrder = new Map<string, number>();
     const colorMap: Record<string, string> = {};
@@ -205,6 +217,13 @@ function SequenceSurface({
     () => computeLayout(viewSequence, { height }),
     [height, viewSequence],
   );
+  const messageY = useMemo(() => {
+    const map: Record<string, number> = {};
+    Object.entries(layout.messagePositions).forEach(([id, pos]) => {
+      map[id] = pos.y;
+    });
+    return map;
+  }, [layout.messagePositions]);
 
   const uniqueMessageClasses = useMemo(
     () =>
@@ -285,6 +304,10 @@ function SequenceSurface({
           renderMessageClass={renderMessageClass}
           renderMeta={renderMeta}
           actorColors={actorColors}
+          actorIndexMap={actorIndexMap}
+          actorCount={actorCount}
+          columnTemplate={columnTemplate}
+          messageY={messageY}
         />
       </CardContent>
     </Card>
@@ -328,6 +351,10 @@ export function SequenceStage({
   renderMessageClass,
   renderMeta,
   actorColors,
+  actorIndexMap,
+  actorCount,
+  columnTemplate,
+  messageY,
 }: {
   layout: SequenceLayout;
   viewSequence: ViewSequence;
@@ -341,6 +368,10 @@ export function SequenceStage({
     message: SequenceMessage,
   ) => ReactNode;
   actorColors: Record<string, string>;
+  actorIndexMap: Record<string, number>;
+  actorCount: number;
+  columnTemplate: string;
+  messageY: Record<string, number>;
 }) {
   const headerHeight = 80;
   const messageOffset = headerHeight + 16;
@@ -351,21 +382,24 @@ export function SequenceStage({
       className="relative w-full overflow-x-auto"
       style={{ minHeight: stageMinHeight }}
     >
-      <div className="min-w-full">
+      <div className="min-w-full grid gap-x-6" style={{ gridTemplateColumns: columnTemplate }}>
         <ActorHeader
           layout={layout}
           renderActorLabel={renderActorLabel}
           actors={viewSequence.actors}
           actorColors={actorColors}
+          actorIndexMap={actorIndexMap}
+          columnTemplate={columnTemplate}
         />
-        <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
+        <div className="relative" style={{ gridColumn: `1 / span ${actorCount}`, marginTop: messageOffset, height: layout.height }}>
           <div className="absolute inset-0">
             {viewSequence.actors.map((actor) => (
               <ActorLane
                 key={actor.id}
                 actor={actor}
-                layout={layout}
                 color={actorColors[actor.id]}
+                actorIndexMap={actorIndexMap}
+                actorCount={actorCount}
               />
             ))}
           </div>
@@ -374,7 +408,6 @@ export function SequenceStage({
               <MessageEdge
                 key={message.id}
                 message={message}
-                layout={layout}
                 sequenceId={viewSequence.id}
                 renderMessageClass={renderMessageClass}
                 renderMeta={renderMeta}
@@ -383,6 +416,9 @@ export function SequenceStage({
                   actorColors[message.to] ??
                   ACTOR_COLORS[0]
                 }
+                actorIndexMap={actorIndexMap}
+                actorCount={actorCount}
+                messageY={messageY[message.id] ?? 0}
               />
             ))}
           </div>
@@ -397,39 +433,35 @@ export function ActorHeader({
   renderActorLabel,
   actors,
   actorColors,
+  actorIndexMap,
+  columnTemplate,
 }: {
   layout: SequenceLayout;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
   actors: SequenceActor[];
   actorColors: Record<string, string>;
+  actorIndexMap: Record<string, number>;
+  columnTemplate: string;
 }) {
-  const roots = actors.filter((actor) => !actor.parentId);
-  const subActors = actors.filter((actor) => actor.parentId);
-
   return (
-    <div className="relative h-20">
-      <div className="absolute left-0 right-0 top-0 h-10">
-        {roots.map((actor) => (
+    <div
+      className="relative grid items-start"
+      style={{ gridTemplateColumns: columnTemplate, rowGap: "4px" }}
+    >
+      {actors.map((actor) => (
+        <div
+          key={actor.id}
+          className="flex flex-col items-center"
+          style={{ gridColumn: (actorIndexMap[actor.id] ?? 0) + 1 }}
+        >
           <ActorAnchor
-            key={actor.id}
             actor={actor}
             x={layout.actorPositions[actor.id]}
             renderActorLabel={renderActorLabel}
             color={actorColors[actor.id]}
           />
-        ))}
-      </div>
-      <div className="absolute left-0 right-0 top-10 h-10">
-        {subActors.map((actor) => (
-          <ActorAnchor
-            key={actor.id}
-            actor={actor}
-            x={layout.actorPositions[actor.id]}
-            renderActorLabel={renderActorLabel}
-            color={actorColors[actor.id]}
-          />
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -502,12 +534,14 @@ export function ActorAnchor({
 
 export function ActorLane({
   actor,
-  layout,
   color,
+  actorIndexMap,
+  actorCount,
 }: {
   actor: SequenceActor;
-  layout: SequenceLayout;
   color?: string;
+  actorIndexMap: Record<string, number>;
+  actorCount: number;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
@@ -519,7 +553,9 @@ export function ActorLane({
     styles.actors[actor.id] ??
     (actor.originId ? styles.actors[actor.originId] : undefined) ??
     (actor.parentId ? styles.actors[actor.parentId] : undefined);
-  const x = layout.actorPositions[actor.id] ?? 0;
+  const idx = actorIndexMap[actor.id] ?? 0;
+  const colWidth = 100 / Math.max(actorCount, 1);
+  const x = (idx + 0.5) * colWidth;
 
   return (
     <div
@@ -542,14 +578,15 @@ export function ActorLane({
 
 export function MessageEdge({
   message,
-  layout,
   sequenceId,
   renderMessageClass,
   renderMeta,
   color,
+  actorIndexMap,
+  actorCount,
+  messageY,
 }: {
   message: SequenceMessage;
-  layout: SequenceLayout;
   sequenceId: string;
   renderMessageClass?: (
     messageClass: string,
@@ -560,16 +597,18 @@ export function MessageEdge({
     message: SequenceMessage,
   ) => ReactNode;
   color?: string;
+  actorIndexMap: Record<string, number>;
+  actorCount: number;
+  messageY: number;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
-  const pos = layout.messagePositions[message.id];
-
-  if (!pos) return null;
-
-  const left = Math.min(pos.fromX, pos.toX);
-  const width = Math.max(Math.abs(pos.toX - pos.fromX), 8);
-  const leftToRight = pos.toX >= pos.fromX;
+  const fromIdx = actorIndexMap[message.from] ?? 0;
+  const toIdx = actorIndexMap[message.to] ?? fromIdx;
+  const colWidth = 100 / Math.max(actorCount, 1);
+  const left = Math.min(fromIdx, toIdx) * colWidth + colWidth * 0.5;
+  const width = Math.max(Math.abs(toIdx - fromIdx) * colWidth, colWidth * 0.2);
+  const leftToRight = toIdx >= fromIdx;
   const styleMessageClass = message.messageClass
     ? styles.messageClasses[message.messageClass] ?? styles.messageClasses[message.originId ?? ""]
     : undefined;
@@ -616,7 +655,7 @@ export function MessageEdge({
         styleMessageClass,
         active && "ring-2 ring-primary/50 ring-offset-2",
       )}
-      style={{ left: `${left}%`, width: `${width}%`, top: pos.y }}
+      style={{ left: `${left}%`, width: `${width}%`, top: messageY }}
       data-message-id={message.id}
     >
       <div className="relative">
