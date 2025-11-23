@@ -14,8 +14,8 @@ Interactive, hook-first sequence diagrams for React/Next.js with Tailwind, shadc
 ## Quick start
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 # open http://localhost:3000
 ```
 
@@ -86,8 +86,8 @@ See `src/lib/sequence/types.ts` for `Sequence`, `SequenceActor`, and `SequenceMe
 ## Testing
 
 ```bash
-npm test        # vitest run
-npm run lint    # eslint
+pnpm test        # vitest run
+pnpm lint        # eslint
 ```
 
 ## License

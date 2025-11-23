@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT OR Apache-2.0",
+  "packageManager": "pnpm@9.15.3",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
