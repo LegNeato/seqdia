@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSequenceController } from "@/hooks/useSequenceController";
-import { type Sequence } from "@/lib/sequence/types";
+import { type Sequence, type SequenceActor } from "@/lib/sequence/types";
 
 const paymentsSubsequence: Sequence = {
   id: "payments-subflow",
@@ -31,7 +31,7 @@ const paymentsSubsequence: Sequence = {
       from: "payments",
       to: "stripe",
       label: "Create intent",
-      messageClass: "info",
+      messageClass: "payments",
       meta: { provider: "stripe" },
     },
     {
@@ -39,7 +39,7 @@ const paymentsSubsequence: Sequence = {
       from: "stripe",
       to: "fraud",
       label: "Share risk",
-      messageClass: "warning",
+      messageClass: "risk",
       kind: "async",
       description: "Stripe hands off fraud data for a second opinion.",
     },
@@ -48,7 +48,7 @@ const paymentsSubsequence: Sequence = {
       from: "fraud",
       to: "payments",
       label: "Risk evaluation",
-      messageClass: "info",
+      messageClass: "risk",
       kind: "return",
     },
     {
@@ -56,7 +56,7 @@ const paymentsSubsequence: Sequence = {
       from: "payments",
       to: "stripe",
       label: "Capture funds",
-      messageClass: "success",
+      messageClass: "happy-path",
       kind: "sync",
       meta: { capture: "manual" },
     },
@@ -78,14 +78,14 @@ const authSubsequence: Sequence = {
       from: "auth",
       to: "session",
       label: "Issue session",
-      messageClass: "success",
+      messageClass: "auth",
     },
     {
       id: "session-audit",
       from: "session",
       to: "audit",
       label: "Log success",
-      messageClass: "info",
+      messageClass: "audit",
       kind: "async",
     },
     {
@@ -93,7 +93,7 @@ const authSubsequence: Sequence = {
       from: "audit",
       to: "auth",
       label: "Ack audit",
-      messageClass: "info",
+      messageClass: "audit",
       kind: "return",
     },
   ],
@@ -129,7 +129,7 @@ const checkoutSequence: Sequence = {
       from: "browser",
       to: "frontend",
       label: "Start checkout",
-      messageClass: "info",
+      messageClass: "entry",
       meta: { path: "/checkout" },
     },
     {
@@ -137,7 +137,7 @@ const checkoutSequence: Sequence = {
       from: "frontend",
       to: "auth",
       label: "Authenticate session",
-      messageClass: "success",
+      messageClass: "auth",
       kind: "sync",
       meta: { latency: "110ms" },
     },
@@ -146,7 +146,7 @@ const checkoutSequence: Sequence = {
       from: "auth",
       to: "database",
       label: "Load profile",
-      messageClass: "success",
+      messageClass: "db",
       kind: "async",
     },
     {
@@ -154,7 +154,7 @@ const checkoutSequence: Sequence = {
       from: "database",
       to: "auth",
       label: "Profile ready",
-      messageClass: "success",
+      messageClass: "db",
       kind: "return",
     },
     {
@@ -162,7 +162,7 @@ const checkoutSequence: Sequence = {
       from: "frontend",
       to: "payments",
       label: "Create intent",
-      messageClass: "info",
+      messageClass: "payments",
     },
     {
       id: "persist-intent",
@@ -170,7 +170,7 @@ const checkoutSequence: Sequence = {
       to: "database",
       label: "Persist intent",
       description: "Use async queue if replication lags.",
-      messageClass: "warning",
+      messageClass: "risk",
       kind: "async",
       meta: { retries: 1 },
     },
@@ -179,7 +179,7 @@ const checkoutSequence: Sequence = {
       from: "database",
       to: "payments",
       label: "Intent persisted",
-      messageClass: "info",
+      messageClass: "db",
       kind: "return",
     },
     {
@@ -187,7 +187,7 @@ const checkoutSequence: Sequence = {
       from: "payments",
       to: "auth",
       label: "Notify auth of instrument",
-      messageClass: "info",
+      messageClass: "payments",
       kind: "async",
     },
     {
@@ -195,7 +195,7 @@ const checkoutSequence: Sequence = {
       from: "payments",
       to: "frontend",
       label: "Confirm payment",
-      messageClass: "success",
+      messageClass: "happy-path",
       kind: "sync",
     },
     {
@@ -203,7 +203,7 @@ const checkoutSequence: Sequence = {
       from: "frontend",
       to: "browser",
       label: "Render receipt",
-      messageClass: "success",
+      messageClass: "happy-path",
       kind: "return",
     },
   ],
@@ -211,17 +211,47 @@ const checkoutSequence: Sequence = {
 
 export default function Home() {
   const controller = useSequenceController(checkoutSequence);
+  const actorLabel = (actor: SequenceActor) => (
+    <div className="flex w-full items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <Layers3 className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col text-left leading-tight">
+          <span className="text-sm font-semibold">{actor.label}</span>
+          {actor.subtitle && (
+            <span className="text-[11px] text-muted-foreground">
+              {actor.subtitle}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     controller.api.setMessageClassStyle(
-      "warning",
-      "border-amber-300 bg-amber-50/90",
+      "risk",
+      "border-amber-300 bg-amber-50/90 text-amber-900",
     );
     controller.api.setMessageClassStyle(
-      "success",
-      "border-emerald-300 bg-emerald-50/80",
+      "db",
+      "border-sky-200 bg-sky-50/90 text-sky-900",
     );
-    controller.api.setMessageClassStyle("info", "border-blue-200 bg-blue-50");
+    controller.api.setMessageClassStyle(
+      "happy-path",
+      "border-emerald-300 bg-emerald-50/80 text-emerald-900",
+    );
+    controller.api.setMessageClassStyle(
+      "auth",
+      "border-indigo-200 bg-indigo-50 text-indigo-900",
+    );
+    controller.api.setMessageClassStyle(
+      "payments",
+      "border-purple-200 bg-purple-50 text-purple-900",
+    );
+    controller.api.setMessageClassStyle(
+      "entry",
+      "border-slate-200 bg-slate-50 text-slate-900",
+    );
     controller.api.setActorStyle("database", "bg-slate-50");
     controller.api.setSequenceStyle(
       checkoutSequence.id,
@@ -240,7 +270,7 @@ export default function Home() {
       "receipt",
     ]);
 
-  const highlightWarnings = () => controller.api.highlightMessageClass("warning");
+  const highlightRisk = () => controller.api.highlightMessageClass("risk");
   const highlightDatabase = () => controller.api.highlightActor("database");
   const expandPayments = () => controller.api.expandActor("payments");
   const collapsePayments = () => controller.api.collapseActor("payments");
@@ -270,8 +300,8 @@ export default function Home() {
             <Button onClick={highlightHappyPath} variant="default">
               Highlight checkout path
             </Button>
-            <Button onClick={highlightWarnings} variant="outline">
-              Highlight warnings
+            <Button onClick={highlightRisk} variant="outline">
+              Highlight risk steps
             </Button>
             <Button onClick={highlightDatabase} variant="secondary">
               Spotlight database actor
@@ -289,7 +319,11 @@ export default function Home() {
           </div>
         </header>
 
-        <SequenceDiagram sequence={checkoutSequence} controller={controller} />
+        <SequenceDiagram
+          sequence={checkoutSequence}
+          controller={controller}
+          renderActorLabel={actorLabel}
+        />
 
         <Card>
           <CardHeader>

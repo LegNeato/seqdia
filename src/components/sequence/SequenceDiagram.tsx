@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   ArrowRight,
   ChevronDown,
@@ -20,12 +20,7 @@ import {
 } from "@/hooks/useSequenceController";
 import { computeLayout, type SequenceLayout } from "@/lib/sequence/layout";
 import { cn } from "@/lib/utils";
-import type {
-  MessageClass,
-  Sequence,
-  SequenceActor,
-  SequenceMessage,
-} from "@/lib/sequence/types";
+import type { Sequence, SequenceActor, SequenceMessage } from "@/lib/sequence/types";
 import { Badge } from "../ui/badge";
 import {
   Card,
@@ -44,6 +39,15 @@ type SequenceDiagramProps = {
   className?: string;
   showLegend?: boolean;
   onReady?: (api: SequenceControllerApi) => void;
+  renderActorLabel?: (actor: SequenceActor) => React.ReactNode;
+  renderMessageClass?: (
+    messageClass: string,
+    message: SequenceMessage,
+  ) => React.ReactNode;
+  renderMeta?: (
+    meta: Record<string, string | number>,
+    message: SequenceMessage,
+  ) => React.ReactNode;
 };
 
 export function SequenceDiagram({
@@ -53,6 +57,9 @@ export function SequenceDiagram({
   className,
   showLegend = true,
   onReady,
+  renderActorLabel,
+  renderMessageClass,
+  renderMeta,
 }: SequenceDiagramProps) {
   return (
     <SequenceProvider sequence={sequence} controller={controller}>
@@ -61,6 +68,9 @@ export function SequenceDiagram({
         className={className}
         showLegend={showLegend}
         onReady={onReady}
+        renderActorLabel={renderActorLabel}
+        renderMessageClass={renderMessageClass}
+        renderMeta={renderMeta}
       />
     </SequenceProvider>
   );
@@ -71,6 +81,15 @@ type SurfaceProps = {
   showLegend: boolean;
   onReady?: (api: SequenceControllerApi) => void;
   className?: string;
+  renderActorLabel?: (actor: SequenceActor) => ReactNode;
+  renderMessageClass?: (
+    messageClass: string,
+    message: SequenceMessage,
+  ) => ReactNode;
+  renderMeta?: (
+    meta: Record<string, string | number>,
+    message: SequenceMessage,
+  ) => ReactNode;
 };
 
 function SequenceSurface({
@@ -78,6 +97,9 @@ function SequenceSurface({
   showLegend,
   onReady,
   className,
+  renderActorLabel,
+  renderMessageClass,
+  renderMeta,
 }: SurfaceProps) {
   const { sequence, controller } = useSequenceContext();
   useSequenceApi(onReady);
@@ -97,6 +119,16 @@ function SequenceSurface({
       ),
     [sequence.messages],
   );
+
+  const messageClassSamples = useMemo(() => {
+    const map: Record<string, SequenceMessage | undefined> = {};
+    sequence.messages.forEach((message) => {
+      if (message.messageClass && !map[message.messageClass]) {
+        map[message.messageClass] = message;
+      }
+    });
+    return map;
+  }, [sequence.messages]);
 
   const sequenceStyle = controller.state.styles.sequences[sequence.id];
   const sequenceHighlighted = controller.state.highlight.sequences.has(
@@ -125,40 +157,98 @@ function SequenceSurface({
             )}
           </div>
           {showLegend && (
-            <SequenceLegend messageClasses={uniqueMessageClasses} />
+            <SequenceLegend
+              messageClasses={uniqueMessageClasses}
+              samples={messageClassSamples}
+              renderMessageClass={
+                renderMessageClass
+                  ? (value) =>
+                      renderMessageClass(
+                        value,
+                        messageClassSamples[value] ?? {
+                          id: `legend-${value}`,
+                          from: "",
+                          to: "",
+                          label: value,
+                        },
+                      )
+                  : undefined
+              }
+            />
           )}
         </div>
       </CardHeader>
       <Separator />
       <CardContent className="pb-6">
-        <SequenceStage layout={layout} />
+        <SequenceStage
+          layout={layout}
+          renderActorLabel={renderActorLabel}
+          renderMessageClass={renderMessageClass}
+          renderMeta={renderMeta}
+        />
       </CardContent>
     </Card>
   );
 }
 
-function SequenceLegend({ messageClasses }: { messageClasses: string[] }) {
+export function SequenceLegend({
+  messageClasses,
+  renderMessageClass,
+  samples,
+}: {
+  messageClasses: string[];
+  renderMessageClass?: (
+    messageClass: string,
+    sampleMessage?: SequenceMessage,
+  ) => ReactNode;
+  samples?: Record<string, SequenceMessage | undefined>;
+}) {
   if (!messageClasses.length) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
       <span className="mr-1 font-semibold">Classes</span>
       {messageClasses.map((value) => (
-        <Badge key={value} variant={messageClassToVariant(value)}>
-          {value}
-        </Badge>
+        <div key={value} className="flex items-center gap-1">
+          {renderMessageClass ? (
+            renderMessageClass(value, samples?.[value])
+          ) : (
+            <Badge variant="outline">{value}</Badge>
+          )}
+        </div>
       ))}
     </div>
   );
 }
 
-function SequenceStage({ layout }: { layout: SequenceLayout }) {
+export function SequenceStage({
+  layout,
+  renderActorLabel,
+  renderMessageClass,
+  renderMeta,
+}: {
+  layout: SequenceLayout;
+  renderActorLabel?: (actor: SequenceActor) => ReactNode;
+  renderMessageClass?: (
+    messageClass: string,
+    message: SequenceMessage,
+  ) => ReactNode;
+  renderMeta?: (
+    meta: Record<string, string | number>,
+    message: SequenceMessage,
+  ) => ReactNode;
+}) {
   const { sequence } = useSequenceContext();
 
   return (
     <div className="relative">
-      <ActorHeader layout={layout} />
-      <NestedSequences layout={layout} />
+      <ActorHeader layout={layout} renderActorLabel={renderActorLabel} />
+      <NestedSequences
+        layout={layout}
+        renderActorLabel={renderActorLabel}
+        renderMessageClass={renderMessageClass}
+        renderMeta={renderMeta}
+      />
       <div className="relative mt-10">
         <div className="absolute inset-0">
           {sequence.actors.map((actor) => (
@@ -172,6 +262,8 @@ function SequenceStage({ layout }: { layout: SequenceLayout }) {
               message={message}
               layout={layout}
               sequenceId={sequence.id}
+              renderMessageClass={renderMessageClass}
+              renderMeta={renderMeta}
             />
           ))}
         </div>
@@ -180,7 +272,13 @@ function SequenceStage({ layout }: { layout: SequenceLayout }) {
   );
 }
 
-function ActorHeader({ layout }: { layout: SequenceLayout }) {
+export function ActorHeader({
+  layout,
+  renderActorLabel,
+}: {
+  layout: SequenceLayout;
+  renderActorLabel?: (actor: SequenceActor) => ReactNode;
+}) {
   const { sequence } = useSequenceContext();
 
   return (
@@ -190,13 +288,22 @@ function ActorHeader({ layout }: { layout: SequenceLayout }) {
           key={actor.id}
           actor={actor}
           x={layout.actorPositions[actor.id]}
+          renderActorLabel={renderActorLabel}
         />
       ))}
     </div>
   );
 }
 
-function ActorAnchor({ actor, x }: { actor: SequenceActor; x: number }) {
+export function ActorAnchor({
+  actor,
+  x,
+  renderActorLabel,
+}: {
+  actor: SequenceActor;
+  x: number;
+  renderActorLabel?: (actor: SequenceActor) => ReactNode;
+}) {
   const { controller } = useSequenceContext();
   const { highlight, styles, collapsedActors } = controller.state;
   const hasChild = Boolean(actor.embeddedSequence);
@@ -225,8 +332,14 @@ function ActorAnchor({ actor, x }: { actor: SequenceActor; x: number }) {
         aria-label={`Actor ${actor.label}`}
         data-actor-id={actor.id}
       >
-        <Sparkles className="h-4 w-4 text-muted-foreground" />
-        <span className="truncate">{actor.label}</span>
+        {renderActorLabel ? (
+          renderActorLabel(actor)
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <span className="truncate">{actor.label}</span>
+          </>
+        )}
         {hasChild &&
           (collapsed ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -241,7 +354,23 @@ function ActorAnchor({ actor, x }: { actor: SequenceActor; x: number }) {
   );
 }
 
-function NestedSequences({ layout }: { layout: SequenceLayout }) {
+export function NestedSequences({
+  layout,
+  renderActorLabel,
+  renderMessageClass,
+  renderMeta,
+}: {
+  layout: SequenceLayout;
+  renderActorLabel?: (actor: SequenceActor) => ReactNode;
+  renderMessageClass?: (
+    messageClass: string,
+    message: SequenceMessage,
+  ) => ReactNode;
+  renderMeta?: (
+    meta: Record<string, string | number>,
+    message: SequenceMessage,
+  ) => ReactNode;
+}) {
   const { sequence, controller } = useSequenceContext();
   const expanded = sequence.actors.filter(
     (actor) =>
@@ -266,7 +395,7 @@ function NestedSequences({ layout }: { layout: SequenceLayout }) {
           <div className="rounded-lg border bg-background shadow-sm">
             <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                Nested: {actor.label}
+                Nested: {renderActorLabel ? renderActorLabel(actor) : actor.label}
                 <Badge variant="secondary" className="text-[11px]">
                   {actor.embeddedSequence?.label ?? actor.embeddedSequence?.id}
                 </Badge>
@@ -285,6 +414,9 @@ function NestedSequences({ layout }: { layout: SequenceLayout }) {
                 sequence={actor.embeddedSequence as Sequence}
                 height={200}
                 showLegend={false}
+                renderActorLabel={renderActorLabel}
+                renderMessageClass={renderMessageClass}
+                renderMeta={renderMeta}
               />
             </div>
           </div>
@@ -294,7 +426,7 @@ function NestedSequences({ layout }: { layout: SequenceLayout }) {
   );
 }
 
-function ActorLane({
+export function ActorLane({
   actor,
   layout,
 }: {
@@ -324,14 +456,24 @@ function ActorLane({
   );
 }
 
-function MessageEdge({
+export function MessageEdge({
   message,
   layout,
   sequenceId,
+  renderMessageClass,
+  renderMeta,
 }: {
   message: SequenceMessage;
   layout: SequenceLayout;
   sequenceId: string;
+  renderMessageClass?: (
+    messageClass: string,
+    message: SequenceMessage,
+  ) => ReactNode;
+  renderMeta?: (
+    meta: Record<string, string | number>,
+    message: SequenceMessage,
+  ) => ReactNode;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
@@ -372,9 +514,11 @@ function MessageEdge({
           {message.label}
         </span>
         {message.messageClass && (
-          <Badge variant={messageClassToVariant(message.messageClass)}>
-            {message.messageClass}
-          </Badge>
+          renderMessageClass ? (
+            renderMessageClass(message.messageClass, message)
+          ) : (
+            <Badge variant="outline">{message.messageClass}</Badge>
+          )
         )}
         <span className="ml-auto flex items-center gap-1 text-[11px] uppercase tracking-wide">
           {message.kind ?? "sync"}
@@ -386,13 +530,19 @@ function MessageEdge({
         </p>
       )}
       {message.meta && (
-        <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-          {Object.entries(message.meta).map(([key, value]) => (
-            <Badge key={key} variant="outline" className="bg-muted/40">
-              <span className="font-semibold">{key}:</span> {String(value)}
-            </Badge>
-          ))}
-        </div>
+        <>
+          {renderMeta ? (
+            renderMeta(message.meta, message)
+          ) : (
+            <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+              {Object.entries(message.meta).map(([key, value]) => (
+                <Badge key={key} variant="outline" className="bg-muted/40">
+                  <span className="font-semibold">{key}:</span> {String(value)}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </>
       )}
       <div className="relative mt-1 h-1.5 w-full">
         <div
@@ -430,20 +580,5 @@ function lineForKind(kind: string) {
       return "bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200";
     default:
       return "bg-gradient-to-r from-slate-200 via-slate-400 to-slate-200";
-  }
-}
-
-function messageClassToVariant(messageClass: MessageClass) {
-  switch (messageClass) {
-    case "success":
-      return "success";
-    case "warning":
-      return "warning";
-    case "error":
-      return "destructive";
-    case "info":
-      return "info";
-    default:
-      return "secondary";
   }
 }

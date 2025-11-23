@@ -7,7 +7,8 @@ Interactive, hook-first sequence diagrams for React/Next.js with Tailwind, shadc
 - Hook-driven control surface (`useSequenceController`, `useSequenceApi`) with functions to highlight or style actors, messages, message classes, or entire sequences.
 - Composable primitives powered by Tailwind + shadcn/ui; bring your own layout or drop in `SequenceDiagram`.
 - Nested actors: attach an embedded `Sequence` to an actor and expand/collapse on demand.
-- Message class theming: style by class name (e.g., `warning`, `success`) or per message/actor.
+- Message class theming: style by arbitrary class names (no built-ins) or per message/actor via `setMessageClassStyle`.
+- Render props for actor labels, message class badges, and metadata so you can provide your own React components.
 - Tested with Vitest + Testing Library; layout spacing uses `d3-scale` under the hood.
 - Dual-licensed MIT or Apache-2.0 for OSS compatibility.
 

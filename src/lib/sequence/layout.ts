@@ -30,9 +30,13 @@ export function computeLayout(
     return acc;
   }, {});
 
-  const y = scaleLinear()
-    .domain([0, Math.max(sequence.messages.length - 1, 1)])
-    .range([0, Math.max(sequence.messages.length - 1, 1) * spacing]);
+  const messageCount = Math.max(sequence.messages.length - 1, 1);
+  const yRange =
+    options.height !== undefined
+      ? Math.max(options.height - spacing, spacing)
+      : messageCount * spacing;
+
+  const y = scaleLinear().domain([0, messageCount]).range([0, yRange]);
 
   const messagePositions = sequence.messages.reduce<
     SequenceLayout["messagePositions"]
