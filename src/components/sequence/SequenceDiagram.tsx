@@ -1,13 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import {
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
-  GitCompare,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, GitCompare, Sparkles } from "lucide-react";
 
 import {
   SequenceProvider,
@@ -41,6 +35,17 @@ type ExpandResult = {
   sequence: ViewSequence;
   entryId?: string;
 };
+
+const ACTOR_COLORS = [
+  "hsl(221, 83%, 53%)",
+  "hsl(173, 58%, 39%)",
+  "hsl(43, 96%, 50%)",
+  "hsl(12, 83%, 58%)",
+  "hsl(280, 65%, 60%)",
+  "hsl(195, 74%, 52%)",
+  "hsl(140, 65%, 45%)",
+  "hsl(330, 70%, 55%)",
+];
 
 function expandSequenceView(
   sequence: Sequence,
@@ -183,6 +188,19 @@ function SequenceSurface({
     () => expandSequenceView(sequence, controller.state.collapsedActors).sequence,
     [controller.state.collapsedActors, sequence],
   );
+  const actorColors = useMemo(() => {
+    const originOrder = new Map<string, number>();
+    const colorMap: Record<string, string> = {};
+    viewSequence.actors.forEach((actor) => {
+      const key = actor.originId ?? actor.id;
+      if (!originOrder.has(key)) {
+        originOrder.set(key, originOrder.size);
+      }
+      const idx = originOrder.get(key) ?? 0;
+      colorMap[actor.id] = ACTOR_COLORS[idx % ACTOR_COLORS.length];
+    });
+    return colorMap;
+  }, [viewSequence.actors]);
   const layout = useMemo(
     () => computeLayout(viewSequence, { height }),
     [height, viewSequence],
@@ -266,6 +284,7 @@ function SequenceSurface({
           renderActorLabel={renderActorLabel}
           renderMessageClass={renderMessageClass}
           renderMeta={renderMeta}
+          actorColors={actorColors}
         />
       </CardContent>
     </Card>
@@ -308,6 +327,7 @@ export function SequenceStage({
   renderActorLabel,
   renderMessageClass,
   renderMeta,
+  actorColors,
 }: {
   layout: SequenceLayout;
   viewSequence: ViewSequence;
@@ -320,8 +340,9 @@ export function SequenceStage({
     meta: Record<string, string | number>,
     message: SequenceMessage,
   ) => ReactNode;
+  actorColors: Record<string, string>;
 }) {
-  const headerHeight = 64;
+  const headerHeight = 80;
   const messageOffset = headerHeight + 16;
   const stageMinHeight = messageOffset + layout.height;
 
@@ -331,11 +352,17 @@ export function SequenceStage({
         layout={layout}
         renderActorLabel={renderActorLabel}
         actors={viewSequence.actors}
+        actorColors={actorColors}
       />
       <div className="relative" style={{ marginTop: messageOffset, height: layout.height }}>
         <div className="absolute inset-0">
           {viewSequence.actors.map((actor) => (
-            <ActorLane key={actor.id} actor={actor} layout={layout} />
+            <ActorLane
+              key={actor.id}
+              actor={actor}
+              layout={layout}
+              color={actorColors[actor.id]}
+            />
           ))}
         </div>
         <div className="relative h-full">
@@ -347,6 +374,11 @@ export function SequenceStage({
               sequenceId={viewSequence.id}
               renderMessageClass={renderMessageClass}
               renderMeta={renderMeta}
+              color={
+                actorColors[message.from] ??
+                actorColors[message.to] ??
+                ACTOR_COLORS[0]
+              }
             />
           ))}
         </div>
@@ -359,21 +391,40 @@ export function ActorHeader({
   layout,
   renderActorLabel,
   actors,
+  actorColors,
 }: {
   layout: SequenceLayout;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
   actors: SequenceActor[];
+  actorColors: Record<string, string>;
 }) {
+  const roots = actors.filter((actor) => !actor.parentId);
+  const subActors = actors.filter((actor) => actor.parentId);
+
   return (
-    <div className="relative h-16">
-      {actors.map((actor) => (
-        <ActorAnchor
-          key={actor.id}
-          actor={actor}
-          x={layout.actorPositions[actor.id]}
-          renderActorLabel={renderActorLabel}
-        />
-      ))}
+    <div className="relative h-20">
+      <div className="absolute left-0 right-0 top-0 h-10">
+        {roots.map((actor) => (
+          <ActorAnchor
+            key={actor.id}
+            actor={actor}
+            x={layout.actorPositions[actor.id]}
+            renderActorLabel={renderActorLabel}
+            color={actorColors[actor.id]}
+          />
+        ))}
+      </div>
+      <div className="absolute left-0 right-0 top-10 h-10">
+        {subActors.map((actor) => (
+          <ActorAnchor
+            key={actor.id}
+            actor={actor}
+            x={layout.actorPositions[actor.id]}
+            renderActorLabel={renderActorLabel}
+            color={actorColors[actor.id]}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -382,10 +433,12 @@ export function ActorAnchor({
   actor,
   x,
   renderActorLabel,
+  color,
 }: {
   actor: SequenceActor;
   x: number;
   renderActorLabel?: (actor: SequenceActor) => ReactNode;
+  color?: string;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles, collapsedActors } = controller.state;
@@ -421,6 +474,7 @@ export function ActorAnchor({
         aria-pressed={!collapsed}
         aria-label={`Actor ${actor.label}`}
         data-actor-id={actor.id}
+        style={{ borderColor: color ?? undefined, color: color ?? undefined }}
       >
         {renderActorLabel ? (
           renderActorLabel(actor)
@@ -447,9 +501,11 @@ export function ActorAnchor({
 export function ActorLane({
   actor,
   layout,
+  color,
 }: {
   actor: SequenceActor;
   layout: SequenceLayout;
+  color?: string;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
@@ -473,8 +529,9 @@ export function ActorLane({
           "h-full w-0.5 rounded-full bg-border",
           actor.laneClassName,
           actorStyle,
-          isHighlighted && "bg-primary/50 shadow-[0_0_0_2px_rgba(59,130,246,0.35)]",
+          isHighlighted && "shadow-[0_0_0_2px_rgba(59,130,246,0.35)]",
         )}
+        style={{ backgroundColor: color ?? undefined }}
         aria-hidden
       />
     </div>
@@ -487,6 +544,7 @@ export function MessageEdge({
   sequenceId,
   renderMessageClass,
   renderMeta,
+  color,
 }: {
   message: SequenceMessage;
   layout: SequenceLayout;
@@ -499,6 +557,7 @@ export function MessageEdge({
     meta: Record<string, string | number>,
     message: SequenceMessage,
   ) => ReactNode;
+  color?: string;
 }) {
   const { controller } = useSequenceContext();
   const { highlight, styles } = controller.state;
@@ -524,92 +583,59 @@ export function MessageEdge({
     highlight.actors.has(message.to) ||
     highlight.sequences.has(sequenceId);
 
+  const lineColor = color ?? "hsl(215 16% 47%)";
+  const labelBg = active ? "bg-white shadow-sm" : "bg-white/80";
+
   return (
     <div
       className={cn(
-        "absolute flex flex-col gap-2 rounded-lg border bg-white/85 px-3 py-2 text-sm shadow-sm backdrop-blur transition",
+        "absolute px-1",
         message.className,
         messageStyle,
         styleMessageClass,
-        active && "ring-2 ring-primary/60 shadow-md bg-primary/5",
+        active && "ring-2 ring-primary/50 ring-offset-2 bg-white/80",
       )}
-      style={{
-        left: `${left}%`,
-        width: `${width}%`,
-        top: pos.y,
-      }}
+      style={{ left: `${left}%`, width: `${width}%`, top: pos.y }}
       data-message-id={message.id}
     >
-      <div className="relative flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1 font-semibold text-foreground">
-          {message.label}
-        </span>
-        {message.messageClass && (
-          renderMessageClass ? (
-            renderMessageClass(message.messageClass, message)
-          ) : (
-            <Badge variant="outline">{message.messageClass}</Badge>
-          )
-        )}
-        <span className="ml-auto flex items-center gap-1 text-[11px] uppercase tracking-wide">
-          {message.kind ?? "sync"}
-        </span>
-      </div>
-      {message.description && (
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {message.description}
-        </p>
-      )}
-      {message.meta && (
-        <>
-          {renderMeta ? (
-            renderMeta(message.meta, message)
-          ) : (
-            <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-              {Object.entries(message.meta).map(([key, value]) => (
-                <Badge key={key} variant="outline" className="bg-muted/40">
-                  <span className="font-semibold">{key}:</span> {String(value)}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-      <div className="relative mt-1 h-1.5 w-full">
+      <div className="relative h-12">
+        <div
+          className="absolute left-0 right-0 top-5 h-px"
+          style={{ backgroundColor: lineColor, opacity: active ? 1 : 0.4 }}
+        />
         <div
           className={cn(
-            "absolute left-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full",
-            lineForKind(pos.kind),
+            "absolute left-1/2 top-0 -translate-x-1/2 rounded-full border px-2 py-1 text-xs font-semibold text-foreground transition",
+            labelBg,
+            active && "ring-1 ring-offset-1 ring-primary/60",
           )}
-          style={{ width: "100%" }}
-          aria-hidden
+          style={{ borderColor: lineColor, color: lineColor }}
         >
-          <ArrowRight
-            className={cn(
-              "absolute -right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground transition",
-              !leftToRight && "rotate-180 left-0 right-auto",
-            )}
-          />
+          <div className="flex items-center gap-1">
+            <span>{message.label}</span>
+            {message.messageClass &&
+              (renderMessageClass ? (
+                renderMessageClass(message.messageClass, message)
+              ) : (
+                <Badge variant="outline">{message.messageClass}</Badge>
+              ))}
+          </div>
         </div>
+        <div
+          className={cn(
+            "absolute top-4 h-2 w-2 rotate-45 border",
+            active ? "bg-white" : "bg-white/80",
+          )}
+          style={{
+            left: leftToRight ? "calc(100% - 5px)" : "-3px",
+            borderColor: lineColor,
+          }}
+          aria-hidden
+        />
       </div>
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{message.from}</span>
-        <span>→</span>
-        <span>{message.to}</span>
-      </div>
+      {message.meta && renderMeta && (
+        <div className="mt-2">{renderMeta(message.meta, message)}</div>
+      )}
     </div>
   );
-}
-
-function lineForKind(kind: string) {
-  switch (kind) {
-    case "async":
-      return "bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200";
-    case "return":
-      return "bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200";
-    case "note":
-      return "bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200";
-    default:
-      return "bg-gradient-to-r from-slate-200 via-slate-400 to-slate-200";
-  }
 }
