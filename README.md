@@ -22,20 +22,20 @@ pnpm dev       # runs demo app at http://localhost:3000
 
 ```bash
 pnpm install
-# if you want the demo styling:
-pnpm add shadcn/ui lucide-react
+# library deps (React + Tailwind helpers)
+pnpm add seqdia react react-dom clsx tailwind-merge class-variance-authority @radix-ui/react-slot
+# demo (Next.js) shell
+pnpm add next
 ```
 
-The shadcn/ui bits are only used on the example page—you can swap them for your own UI components.
+The library ships only the core diagram primitives/hooks; you bring your own UI shell/styling. The demo uses local shadcn-style components.
 
 ## Usage
 
 Define your data and drive the diagram with the controller:
 
 ```tsx
-import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
-import { useSequenceController } from "@/hooks/useSequenceController";
-import { defineLeafDiagram, type SequenceDiagramModel } from "@/lib/sequence/types";
+import { SequenceDiagram, useSequenceController, defineLeafDiagram, type SequenceDiagramModel } from "seqdia";
 
 const model: SequenceDiagramModel = defineLeafDiagram({
   title: "Checkout orchestration",
@@ -97,16 +97,16 @@ See `src/lib/sequence/types.ts` for `ActorNode`, `SequenceMessage`, and `Sequenc
 
 ## Using without Next.js
 
-The components are plain React. To use outside Next:
+The library is plain React. In a non-Next app:
 
-1) Import from `src/components/sequence/*`, `src/hooks/*`, and `src/lib/sequence/*`.
-2) Swap shadcn/ui wrappers (`Button`, `Card`, etc.) for your design system.
-3) Keep or replace the Tailwind classes as needed.
+1) Install `seqdia` and peer deps (`react`, `react-dom`, Tailwind helpers).
+2) Import from `"seqdia"` and supply your own layout shell/styles.
+3) Use the granular exports to compose your own diagram surface.
 
 ## Monorepo layout
 
-- `packages/seqdia`: publishable React/Tailwind library (exports components, hooks, types).  
-- `apps/demo`: Next.js demo/docs shell consuming the library via workspace dependency.
+- `packages/seqdia`: publishable React/Tailwind library (components, hooks, types, layout utilities).  
+- `apps/demo`: Next.js demo/docs shell consuming the library via workspace dependency with its own UI components.
 
 ## Testing
 

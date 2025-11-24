@@ -42,6 +42,7 @@ Key helpers:
 - `defineLeafDiagram` ensures messages target leaf actors (grouping nodes are view-only).
 - `defineLinearDiagram` enforces a continuous message chain.
 - `deriveVisibleMessages` maps canonical leaf messages to the current expanded/collapsed view.
+- `HeaderGrid`, `RegionsLayer`, `RailsLayer`, `MessagesLayer`, and `useSequenceLayout` let you compose your own surface with custom shells/styling.
 
 ## Scripts
 
