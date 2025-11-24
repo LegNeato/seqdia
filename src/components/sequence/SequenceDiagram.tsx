@@ -294,34 +294,38 @@ function DiagramCanvas({
     return map;
   }, [layout.visibleActors]);
 
-  const resolveEndpoint = (
-    actorId: string,
-    toward: "left" | "right",
-  ): { anchor: number; actorId: string } => {
-    const actor = actorMap[actorId];
-    if (actor && actor.hasChildren && actor.expanded) {
-      const leaf =
-        toward === "right"
-          ? leafByEnd.get(actor.leafEnd)
-          : leafByStart.get(actor.leafStart);
-      if (leaf) {
-        return {
-          anchor: layout.anchors[leaf.actorId] * COLUMN_WIDTH,
-          actorId: leaf.actorId,
-        };
-      }
-    }
-    const span = layout.spans[actorId];
-    const width = span.end - span.start;
-    if (width > 1) {
-      const anchor =
-        toward === "right"
-          ? span.end * COLUMN_WIDTH
-          : span.start * COLUMN_WIDTH;
-      return { anchor, actorId };
-    }
-    return { anchor: layout.anchors[actorId] * COLUMN_WIDTH, actorId };
-  };
+  const resolveEndpoint = useMemo(
+    () =>
+      (
+        actorId: string,
+        toward: "left" | "right",
+      ): { anchor: number; actorId: string } => {
+        const actor = actorMap[actorId];
+        if (actor && actor.hasChildren && actor.expanded) {
+          const leaf =
+            toward === "right"
+              ? leafByEnd.get(actor.leafEnd)
+              : leafByStart.get(actor.leafStart);
+          if (leaf) {
+            return {
+              anchor: layout.anchors[leaf.actorId] * COLUMN_WIDTH,
+              actorId: leaf.actorId,
+            };
+          }
+        }
+        const span = layout.spans[actorId];
+        const width = span.end - span.start;
+        if (width > 1) {
+          const anchor =
+            toward === "right"
+              ? span.end * COLUMN_WIDTH
+              : span.start * COLUMN_WIDTH;
+          return { anchor, actorId };
+        }
+        return { anchor: layout.anchors[actorId] * COLUMN_WIDTH, actorId };
+      },
+    [actorMap, layout.anchors, layout.spans, leafByEnd, leafByStart],
+  );
 
   const resolvedMessages = useMemo(() => {
     const last = new Map<string, number>();
@@ -378,14 +382,9 @@ function DiagramCanvas({
           const span = layout.spans[actor.actorId];
           const xStart = span.start * COLUMN_WIDTH;
           const xEnd = span.end * COLUMN_WIDTH;
-          const highlighted = highlight.actors.has(actor.actorId);
-          const selected = selection.actors.has(actor.actorId);
           const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
           const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.3);
-          const fill = baseFill;
-          const toAnchor = layout.anchors[actor.actorId] * COLUMN_WIDTH;
-          const leftAnchor = span.start * COLUMN_WIDTH;
-          const rightAnchor = span.end * COLUMN_WIDTH;
+          const fill = actor.hasChildren && actor.expanded ? softColor(color, 99.6) : baseFill;
 
           return (
             <div key={`region-${actor.actorId}`}>

@@ -1,7 +1,6 @@
 import {
   type ActorNode,
   type SequenceDiagramModel,
-  type SequenceMessage,
   type VisibleMessage,
 } from "./types";
 
@@ -23,7 +22,6 @@ function buildVisibleState(actors: readonly ActorNode[]): VisibleState {
   ) => {
     nodes.forEach((node) => {
       actorMap.set(node.actorId, node);
-      const start = startIndex.value;
       const hasChildren = Boolean(node.children && node.children.length);
       if (hasChildren) {
         walk(node.children ?? [], startIndex, endIndex);
@@ -33,7 +31,6 @@ function buildVisibleState(actors: readonly ActorNode[]): VisibleState {
         leafByStart.set(node.actorId, node);
         leafByEnd.set(node.actorId, node);
       }
-      endIndex.value += hasChildren ? node.children!.length : 0;
     });
   };
 
