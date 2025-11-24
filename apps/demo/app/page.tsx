@@ -186,7 +186,7 @@ export default function Home() {
   );
 
   const highlightHappyPath = () =>
-    controller.api.highlightMessages([
+    controller.highlightMessages([
       "auth-session",
       "issue-session",
       "profile-lookup",
@@ -198,16 +198,16 @@ export default function Home() {
     ]);
 
   const spotlightInfra = () =>
-    controller.api.highlightActors(["auth", "payments", "database"]);
+    controller.highlightActors(["auth", "payments", "database"]);
 
-  const expandAll = () => controller.api.setExpandedActors(allActorIds);
+  const expandAll = () => controller.setExpandedActors(allActorIds);
   const collapseNested = () => {
-    controller.api.collapseActor("auth");
-    controller.api.collapseActor("payments");
+    controller.collapseActor("auth");
+    controller.collapseActor("payments");
   };
   const clear = () => {
-    controller.api.clearHighlights();
-    controller.api.clearSelection();
+    controller.clearHighlights();
+    controller.clearSelection();
   };
 
   return (
@@ -273,9 +273,9 @@ export default function Home() {
             </div>
             <div className="rounded-lg border bg-muted/40 p-3 text-xs">
               <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
-{`controller.api.highlightMessages(["intent", "confirm"]);
-controller.api.collapseActor("payments");
-controller.api.toggleActorExpansion("auth");`}
+{`controller.highlightMessages(["intent", "confirm"]);
+controller.collapseActor("payments");
+controller.toggleActorExpansion("auth");`}
               </pre>
             </div>
           </CardContent>

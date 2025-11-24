@@ -31,7 +31,18 @@ export type SequenceControllerState = {
 export type SequenceController = {
   model: SequenceDiagramModel;
   state: SequenceControllerState;
-  api: SequenceControllerApi;
+  highlightActors: SequenceControllerApi["highlightActors"];
+  highlightMessages: SequenceControllerApi["highlightMessages"];
+  clearHighlights: SequenceControllerApi["clearHighlights"];
+  selectActors: SequenceControllerApi["selectActors"];
+  selectMessages: SequenceControllerApi["selectMessages"];
+  toggleActorSelection: SequenceControllerApi["toggleActorSelection"];
+  toggleMessageSelection: SequenceControllerApi["toggleMessageSelection"];
+  clearSelection: SequenceControllerApi["clearSelection"];
+  toggleActorExpansion: SequenceControllerApi["toggleActorExpansion"];
+  collapseActor: SequenceControllerApi["collapseActor"];
+  expandActor: SequenceControllerApi["expandActor"];
+  setExpandedActors: SequenceControllerApi["setExpandedActors"];
 };
 
 function ensureArray(value: string | string[]) {
@@ -152,5 +163,5 @@ export function useSequenceController(
     [expandedActors, highlight, selection],
   );
 
-  return { model, state, api };
+  return { model, state, ...api };
 }

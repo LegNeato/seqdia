@@ -1,17 +1,19 @@
 import { useEffect, useRef } from "react";
 import { useSequenceContext } from "../components/sequence/SequenceProvider";
-import { type SequenceControllerApi } from "./useSequenceController";
+import { type SequenceController } from "./useSequenceController";
 
-export function useSequenceApi(onReady?: (api: SequenceControllerApi) => void) {
+export function useSequenceApi(
+  onReady?: (controller: SequenceController) => void,
+) {
   const { controller } = useSequenceContext();
   const hasFired = useRef(false);
 
   useEffect(() => {
     if (!hasFired.current && onReady) {
-      onReady(controller.api);
+      onReady(controller);
       hasFired.current = true;
     }
-  }, [controller.api, onReady]);
+  }, [controller, onReady]);
 
-  return controller.api;
+  return controller;
 }

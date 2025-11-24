@@ -215,9 +215,9 @@ function HeaderGrid({
                   type="button"
                   onClick={() => {
                     if (actor.hasChildren) {
-                      controller.api.toggleActorExpansion(actor.actorId);
-                    }
-                    controller.api.toggleActorSelection(actor.actorId);
+                    controller.toggleActorExpansion(actor.actorId);
+                  }
+                    controller.toggleActorSelection(actor.actorId);
                     onActorClick?.(actor.actorId);
                   }}
                   data-actor-id={actor.actorId}
@@ -447,7 +447,7 @@ function DiagramCanvas({
               }
               style={{ top: y - 2, left, width }}
               onClick={() => {
-                controller.api.toggleMessageSelection(message.messageId);
+                controller.toggleMessageSelection(message.messageId);
                 onMessageClick?.(message.messageId);
               }}
             >

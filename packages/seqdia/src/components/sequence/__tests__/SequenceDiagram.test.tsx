@@ -45,10 +45,10 @@ function Harness() {
 
   return (
     <div>
-      <button onClick={() => controller.api.highlightMessages("m1")}>
+      <button onClick={() => controller.highlightMessages("m1")}>
         highlight message
       </button>
-      <button onClick={() => controller.api.expandActor("branch")}>
+      <button onClick={() => controller.expandActor("branch")}>
         expand nested
       </button>
       <SequenceDiagram model={model} controller={controller} />
