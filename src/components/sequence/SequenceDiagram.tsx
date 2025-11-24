@@ -279,21 +279,95 @@ function DiagramCanvas({
   const viewWidth = layout.leafCount * COLUMN_WIDTH;
   const height = layout.messageAreaHeight;
   const actorMap = layout.visibleActorMap;
+  const leafByStart = useMemo(() => {
+    const map = new Map<number, VisibleActor>();
+    layout.visibleActors
+      .filter((actor) => actor.isLeaf)
+      .forEach((actor) => map.set(actor.leafStart, actor));
+    return map;
+  }, [layout.visibleActors]);
+  const leafByEnd = useMemo(() => {
+    const map = new Map<number, VisibleActor>();
+    layout.visibleActors
+      .filter((actor) => actor.isLeaf)
+      .forEach((actor) => map.set(actor.leafEnd, actor));
+    return map;
+  }, [layout.visibleActors]);
+
+  const resolveEndpoint = (
+    actorId: string,
+    toward: "left" | "right",
+  ): { anchor: number; actorId: string } => {
+    const actor = actorMap[actorId];
+    if (actor && actor.hasChildren && actor.expanded) {
+      const leaf =
+        toward === "right"
+          ? leafByEnd.get(actor.leafEnd)
+          : leafByStart.get(actor.leafStart);
+      if (leaf) {
+        return {
+          anchor: layout.anchors[leaf.actorId] * COLUMN_WIDTH,
+          actorId: leaf.actorId,
+        };
+      }
+    }
+    const span = layout.spans[actorId];
+    const width = span.end - span.start;
+    if (width > 1) {
+      const anchor =
+        toward === "right"
+          ? span.end * COLUMN_WIDTH
+          : span.start * COLUMN_WIDTH;
+      return { anchor, actorId };
+    }
+    return { anchor: layout.anchors[actorId] * COLUMN_WIDTH, actorId };
+  };
+
+  const resolvedMessages = useMemo(() => {
+    const last = new Map<string, number>();
+    return layout.messages.map(({ message, y }) => {
+      const toAnchor =
+        layout.anchors[message.toActorId] * COLUMN_WIDTH;
+      const directionHint =
+        toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;
+      const fromResolved = resolveEndpoint(
+        message.fromActorId,
+        directionHint > 0 ? "right" : "left",
+      );
+      const toResolved = resolveEndpoint(
+        message.toActorId,
+        directionHint > 0 ? "left" : "right",
+      );
+      const previousFrom = last.get(fromResolved.actorId);
+      const fromX = previousFrom ?? fromResolved.anchor;
+      const toX = toResolved.anchor;
+      const direction = toX >= fromX ? 1 : -1;
+      last.set(toResolved.actorId, toX);
+      return {
+        message,
+        y,
+        fromResolved,
+        toResolved,
+        fromX,
+        toX,
+        direction,
+      };
+    });
+  }, [layout.anchors, layout.messages, resolveEndpoint]);
+
   const activeActors = useMemo(() => {
     const set = new Set<string>();
-    layout.messages.forEach(({ message }) => {
-      set.add(message.fromActorId);
-      set.add(message.toActorId);
+    resolvedMessages.forEach((entry) => {
+      set.add(entry.fromResolved.actorId);
+      set.add(entry.toResolved.actorId);
     });
     return set;
-  }, [layout.messages]);
+  }, [resolvedMessages]);
 
   const regionNodes = [...layout.visibleActors]
     .filter((actor) => actor.hasChildren && actor.expanded)
     .sort((a, b) => a.depth - b.depth);
   const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
-  const lastEndpoint = useMemo(() => new Map<string, number>(), []);
-
   return (
     <div
       className="relative"
@@ -370,50 +444,14 @@ function DiagramCanvas({
           );
         })}
 
-        {layout.messages.map(({ message, y }) => {
-          const resolveEndpoint = (
-            actorId: string,
-            toward: "left" | "right",
-          ) => {
-            const actor = actorMap[actorId];
-            if (actor && actor.hasChildren && actor.expanded) {
-              const span = layout.spans[actorId];
-              return (toward === "right" ? span.end : span.start) * COLUMN_WIDTH;
-            }
-            const span = layout.spans[actorId];
-            const width = span.end - span.start;
-            if (width > 1) {
-              return toward === "right"
-                ? span.end * COLUMN_WIDTH
-                : span.start * COLUMN_WIDTH;
-            }
-            return layout.anchors[actorId] * COLUMN_WIDTH;
-          };
-
-          const toAnchor =
-            layout.anchors[message.toActorId] * COLUMN_WIDTH;
-          const directionHint =
-            toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;
-          const previousFrom = lastEndpoint.get(message.fromActorId);
-          const fromX =
-            previousFrom ??
-            resolveEndpoint(
-              message.fromActorId,
-              directionHint > 0 ? "right" : "left",
-            );
-          const toX = resolveEndpoint(
-            message.toActorId,
-            directionHint > 0 ? "left" : "right",
-          );
-          const direction = toX >= fromX ? 1 : -1;
-          lastEndpoint.set(message.toActorId, toX);
+        {resolvedMessages.map(({ message, y, fromResolved, toResolved, fromX, toX, direction }) => {
           const left = Math.min(fromX, toX);
           const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
           const stroke = "#111827"; // neutral black/near-black for all messages
           const strokeHighlighted =
             highlight.messages.has(message.messageId) ||
-            highlight.actors.has(message.fromActorId) ||
-            highlight.actors.has(message.toActorId);
+            highlight.actors.has(fromResolved.actorId) ||
+            highlight.actors.has(toResolved.actorId);
           const selected = selection.messages.has(message.messageId);
 
           return (
