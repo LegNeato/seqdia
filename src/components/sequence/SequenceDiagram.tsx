@@ -278,6 +278,7 @@ function DiagramCanvas({
 
   const viewWidth = layout.leafCount * COLUMN_WIDTH;
   const height = layout.messageAreaHeight;
+  const actorMap = layout.visibleActorMap;
   const activeActors = useMemo(() => {
     const set = new Set<string>();
     layout.messages.forEach(({ message }) => {
@@ -370,7 +371,15 @@ function DiagramCanvas({
         })}
 
         {layout.messages.map(({ message, y }) => {
-          const getAnchor = (actorId: string, toward: "left" | "right") => {
+          const resolveEndpoint = (
+            actorId: string,
+            toward: "left" | "right",
+          ) => {
+            const actor = actorMap[actorId];
+            if (actor && actor.hasChildren && actor.expanded) {
+              const span = layout.spans[actorId];
+              return (toward === "right" ? span.end : span.start) * COLUMN_WIDTH;
+            }
             const span = layout.spans[actorId];
             const width = span.end - span.start;
             if (width > 1) {
@@ -388,11 +397,11 @@ function DiagramCanvas({
           const previousFrom = lastEndpoint.get(message.fromActorId);
           const fromX =
             previousFrom ??
-            getAnchor(
+            resolveEndpoint(
               message.fromActorId,
               directionHint > 0 ? "right" : "left",
             );
-          const toX = getAnchor(
+          const toX = resolveEndpoint(
             message.toActorId,
             directionHint > 0 ? "left" : "right",
           );
