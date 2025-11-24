@@ -382,31 +382,14 @@ function DiagramCanvas({
           const span = layout.spans[actor.actorId];
           const xStart = span.start * COLUMN_WIDTH;
           const xEnd = span.end * COLUMN_WIDTH;
-          const highlighted = highlight.actors.has(actor.actorId);
-          const selected = selection.actors.has(actor.actorId);
           const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
           const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.3);
           const fill = actor.hasChildren && actor.expanded ? softColor(color, 99.6) : baseFill;
-          const toAnchor = layout.anchors[actor.actorId] * COLUMN_WIDTH;
-          const leftAnchor = span.start * COLUMN_WIDTH;
-          const rightAnchor = span.end * COLUMN_WIDTH;
 
           return (
-            <div
-              key={`region-${actor.actorId}`}
-              data-highlighted={highlighted ? "true" : undefined}
-              data-selected={selected ? "true" : undefined}
-              data-left-anchor={leftAnchor}
-              data-right-anchor={rightAnchor}
-              data-anchor={toAnchor}
-            >
+            <div key={`region-${actor.actorId}`}>
               <div
-                className={cn(
-                  "absolute inset-y-0",
-                  actor.regionClassName,
-                  highlighted && "ring-1 ring-primary/30",
-                  selected && "ring-2 ring-primary/40 ring-offset-1",
-                )}
+                className={cn("absolute inset-y-0", actor.regionClassName)}
                 style={{
                   left: xStart,
                   width: xEnd - xStart,
