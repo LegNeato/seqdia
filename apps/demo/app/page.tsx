@@ -252,7 +252,19 @@ export default function Home() {
           </div>
         </header>
 
-        <SequenceDiagram model={checkoutModel} controller={controller} />
+        <Card className="overflow-hidden border-border/80">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              Checkout orchestration
+            </CardTitle>
+            <CardDescription>
+              Expand groups to reroute messages to their leaf actors; rails hide when expanded.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <SequenceDiagram model={checkoutModel} controller={controller} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
