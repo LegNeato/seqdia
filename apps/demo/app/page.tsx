@@ -280,6 +280,49 @@ controller.api.toggleActorExpansion("auth");`}
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Library usage</CardTitle>
+            <CardDescription>
+              Install `seqdia` in any React + Tailwind app and render the
+              tree-based diagram. The Next.js app here is only the demo shell.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="text-foreground text-sm font-semibold">
+                Install
+              </p>
+              <pre className="rounded-md bg-slate-900 px-3 py-2 text-xs text-slate-100">
+{`pnpm add seqdia react react-dom
+pnpm add clsx tailwind-merge class-variance-authority @radix-ui/react-slot`}
+              </pre>
+              <p className="text-foreground text-sm font-semibold">
+                Import and render
+              </p>
+              <p>
+                Use `defineLeafDiagram` to ensure messages only target leaf
+                actors. Grouping nodes vanish as rails when expanded.
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs">
+              <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
+{`import { SequenceDiagram, useSequenceController, defineLeafDiagram } from "seqdia";
+
+const model = defineLeafDiagram({
+  actors: [{ actorId: "a", label: "Service A" }, { actorId: "b", label: "Service B" }],
+  messages: [{ messageId: "m1", fromActorId: "a", toActorId: "b", label: "Call" }],
+});
+
+export function Simple() {
+  const controller = useSequenceController(model);
+  return <SequenceDiagram model={model} controller={controller} />;
+}`}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
