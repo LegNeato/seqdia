@@ -308,6 +308,9 @@ function DiagramCanvas({
           const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
           const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.3);
           const fill = baseFill;
+          const toAnchor = layout.anchors[actor.actorId] * COLUMN_WIDTH;
+          const leftAnchor = span.start * COLUMN_WIDTH;
+          const rightAnchor = span.end * COLUMN_WIDTH;
 
           return (
             <div key={`region-${actor.actorId}`}>
@@ -321,11 +324,21 @@ function DiagramCanvas({
               />
               <div
                 className="absolute inset-y-0 w-[2px]"
-                style={{ left: xStart, backgroundColor: color }}
+                style={{
+                  left: xStart,
+                  backgroundColor: color,
+                  borderColor: color,
+                  borderLeftStyle: toAnchor <= leftAnchor ? "dashed" : "solid",
+                }}
               />
               <div
                 className="absolute inset-y-0 w-[2px]"
-                style={{ left: xEnd, backgroundColor: color }}
+                style={{
+                  left: xEnd,
+                  backgroundColor: color,
+                  borderColor: color,
+                  borderRightStyle: toAnchor >= rightAnchor ? "dashed" : "solid",
+                }}
               />
             </div>
           );
