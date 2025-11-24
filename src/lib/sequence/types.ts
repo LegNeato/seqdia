@@ -97,3 +97,12 @@ export function defineLeafDiagram<
 >(model: { actors: A; messages: LeafOnlyMessages<A, M> } & SequenceDiagramModel) {
   return model;
 }
+
+export type VisibleMessage =
+  | { kind: "leaf"; message: SequenceMessage }
+  | {
+      kind: "rolled";
+      message: SequenceMessage;
+      fromLeafActorId: string;
+      toLeafActorId: string;
+    };
