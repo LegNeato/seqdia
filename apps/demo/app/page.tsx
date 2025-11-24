@@ -9,14 +9,16 @@ import {
   defineLeafDiagram,
   type ActorNode,
   type SequenceDiagramModel,
-  Badge,
-  Button,
+} from "seqdia";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "seqdia";
+} from "../components/ui/card";
 
 function collectActorIds(actors: ActorNode[]): string[] {
   return actors.flatMap((actor) => [
