@@ -397,24 +397,6 @@ function DiagramCanvas({
                   background: fill,
                 }}
               />
-              <div
-                className="absolute inset-y-0 w-[2px]"
-                style={{
-                  left: xStart,
-                  backgroundColor: color,
-                  borderColor: color,
-                  borderLeftStyle: toAnchor <= leftAnchor ? "dashed" : "solid",
-                }}
-              />
-              <div
-                className="absolute inset-y-0 w-[2px]"
-                style={{
-                  left: xEnd,
-                  backgroundColor: color,
-                  borderColor: color,
-                  borderRightStyle: toAnchor >= rightAnchor ? "dashed" : "solid",
-                }}
-              />
             </div>
           );
         })}
