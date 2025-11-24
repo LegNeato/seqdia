@@ -336,6 +336,49 @@ export function Simple() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Compose your own layout</CardTitle>
+            <CardDescription>
+              Using the exposed layers and layout hook; swap in your own shells/styles.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="rounded-lg border bg-muted/40 p-4 text-xs">
+            <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
+{`import {
+  HeaderGrid,
+  RegionsLayer,
+  RailsLayer,
+  MessagesLayer,
+  useSequenceLayout,
+  useSequenceController,
+  defineLeafDiagram,
+} from "seqdia";
+
+const model = defineLeafDiagram({ /* actors/messages */ });
+const controller = useSequenceController(model);
+const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } =
+  useSequenceLayout(model, controller);
+
+return (
+  <div style={{ minWidth: layout.leafCount * 140 }}>
+    <HeaderGrid
+      layout={{ ...layout, gridTemplate: \
+        \\\`repeat(\\${layout.leafCount}, 140px)\\\` }}
+      actorColors={actorColors}
+      actorBackgrounds={actorBackgrounds}
+    />
+    <div className="relative" style={{ height: layout.messageAreaHeight }}>
+      <RegionsLayer layout={layout} actorColors={actorColors} actorBackgrounds={actorBackgrounds} />
+      <RailsLayer layout={layout} actorColors={actorColors} activeActors={activeActors} />
+      <MessagesLayer resolvedMessages={resolvedMessages} />
+    </div>
+  </div>
+);`}
+            </pre>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
