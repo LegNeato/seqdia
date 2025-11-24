@@ -261,7 +261,7 @@ export default function Home() {
               Expand groups to reroute messages to their leaf actors; rails hide when expanded.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-6">
             <SequenceDiagram model={checkoutModel} controller={controller} />
           </CardContent>
         </Card>
