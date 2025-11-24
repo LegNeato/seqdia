@@ -16,7 +16,7 @@ import {
 import { useSequenceController } from "@/hooks/useSequenceController";
 import {
   type ActorNode,
-  defineLinearDiagram,
+  defineLeafDiagram,
   type SequenceDiagramModel,
 } from "@/lib/sequence/types";
 
@@ -27,7 +27,7 @@ function collectActorIds(actors: ActorNode[]): string[] {
   ]);
 }
 
-const checkoutModel: SequenceDiagramModel = defineLinearDiagram({
+const checkoutModel: SequenceDiagramModel = defineLeafDiagram({
   id: "checkout-sequence",
   title: "Checkout orchestration",
   description:

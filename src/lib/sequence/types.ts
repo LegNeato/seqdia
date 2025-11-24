@@ -60,3 +60,40 @@ export function defineLinearDiagram<
 >(model: M & { messages: LinearMessages<M["messages"]> }): M {
   return model;
 }
+
+export type LeafOnlyMessages<
+  Actors extends readonly ActorNode[],
+  Ms extends readonly SequenceMessage[],
+> = Ms extends readonly [infer First, ...infer Rest]
+  ? First extends SequenceMessage
+    ? First["fromActorId"] extends ActorIdList<Actors>[number]
+      ? First["toActorId"] extends ActorIdList<Actors>[number]
+        ? [First, ...LeafOnlyMessages<Actors, Rest extends readonly SequenceMessage[] ? Rest : []>]
+        : never
+      : never
+    : never
+  : Ms;
+
+type ActorIdList<Actors extends readonly ActorNode[]> = Actors extends readonly [
+  infer First,
+  ...infer Rest,
+]
+  ? First extends ActorNode
+    ? [
+        First["actorId"],
+        ...ActorIdList<
+          First["children"] extends readonly ActorNode[]
+            ? First["children"]
+            : []
+        >,
+        ...ActorIdList<Rest extends readonly ActorNode[] ? Rest : []>,
+      ]
+    : []
+  : [];
+
+export function defineLeafDiagram<
+  A extends readonly ActorNode[],
+  M extends readonly SequenceMessage[],
+>(model: { actors: A; messages: LeafOnlyMessages<A, M> } & SequenceDiagramModel) {
+  return model;
+}
