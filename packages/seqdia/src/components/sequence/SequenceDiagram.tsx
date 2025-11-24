@@ -256,20 +256,15 @@ export function RailsLayer({ layout, activeActors, getActorStyle }: RailsProps) 
         const active =
           selected || highlighted || activeActors.has(actor.actorId);
         const stroke = active ? base : softColor(base, 70);
-        const dashed = style?.railVariant === "dashed" || !active;
 
         return (
           <div
             key={`line-${actor.actorId}`}
-            className={cn(
-              "absolute inset-y-0 w-[2px]",
-              dashed && "border-l border-dashed",
-              style?.railClassName,
-            )}
+            className={cn("absolute inset-y-0 w-[2px]", style?.railClassName)}
             style={{
               left: x,
               backgroundColor: active ? stroke : undefined,
-              borderColor: active ? undefined : stroke,
+              borderColor: undefined,
             }}
           />
         );
