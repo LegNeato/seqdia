@@ -20,7 +20,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 
-function collectActorIds(actors: ActorNode[]): string[] {
+function collectActorIds(actors: readonly ActorNode[]): string[] {
   return actors.flatMap((actor) => [
     actor.actorId,
     ...collectActorIds(actor.children ?? []),
@@ -178,7 +178,7 @@ const checkoutModel: SequenceDiagramModel = defineLeafDiagram({
       rowIndex: 16,
     },
   ] as const,
-});
+} as const);
 
 export default function Home() {
   const controller = useSequenceController(checkoutModel);
@@ -364,7 +364,7 @@ const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } 
 return (
   <div style={{ minWidth: layout.leafCount * 140 }}>
     <HeaderGrid
-      layout={{ ...layout, gridTemplate: "repeat(${layout.leafCount}, 140px)" }}
+      layout={{ ...layout, gridTemplate: "repeat(leafCount, 140px)" }}
       actorColors={actorColors}
       actorBackgrounds={actorBackgrounds}
     />

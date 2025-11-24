@@ -22,6 +22,18 @@ type SequenceDiagramProps = {
   renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
   onActorClick?: (actorId: string) => void;
   onMessageClick?: (messageId: string) => void;
+  getActorStyle?: (actor: VisibleActor) => {
+    labelClassName?: string;
+    regionClassName?: string;
+    railClassName?: string;
+    color?: string;
+    backgroundColor?: string;
+    railVariant?: "solid" | "dashed";
+  };
+  getMessageStyle?: (message: SequenceMessage) => {
+    strokeColor?: string;
+    bubbleClassName?: string;
+  };
 };
 
 /**
@@ -46,10 +58,14 @@ function SequenceSurface({
   renderMessageLabel,
   onActorClick,
   onMessageClick,
+  getActorStyle,
+  getMessageStyle,
 }: SurfaceProps) {
   const { model, controller } = useSequenceContext();
-  const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } =
-    useSequenceLayout(model, controller);
+  const { layout, resolvedMessages, activeActors } = useSequenceLayout(
+    model,
+    controller,
+  );
 
   const gridTemplate = useMemo(
     () => `repeat(${layout.leafCount}, ${COLUMN_WIDTH}px)`,
@@ -61,23 +77,22 @@ function SequenceSurface({
     <div className={cn("overflow-hidden", className)}>
       <div className="w-full overflow-x-auto">
         <div style={{ minWidth }}>
-          <HeaderGrid
-            layout={{ ...layout, gridTemplate }}
-            onActorClick={onActorClick}
-            renderActorLabel={renderActorLabel}
-            actorColors={actorColors}
-            actorBackgrounds={actorBackgrounds}
-          />
-          <DiagramCanvas
-            layout={layout}
-            minWidth={minWidth}
-            renderMessageLabel={renderMessageLabel}
-            onMessageClick={onMessageClick}
-            actorColors={actorColors}
-            actorBackgrounds={actorBackgrounds}
-            resolvedMessages={resolvedMessages}
-            activeActors={activeActors}
-          />
+            <HeaderGrid
+              layout={{ ...layout, gridTemplate }}
+              onActorClick={onActorClick}
+              renderActorLabel={renderActorLabel}
+              getActorStyle={getActorStyle}
+            />
+            <DiagramCanvas
+              layout={layout}
+              minWidth={minWidth}
+              renderMessageLabel={renderMessageLabel}
+              onMessageClick={onMessageClick}
+              resolvedMessages={resolvedMessages}
+              activeActors={activeActors}
+              getActorStyle={getActorStyle}
+              getMessageStyle={getMessageStyle}
+            />
         </div>
       </div>
     </div>
@@ -88,16 +103,14 @@ export type HeaderGridProps = {
   layout: SequenceLayout & { gridTemplate: string };
   renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
   onActorClick?: (actorId: string) => void;
-  actorColors: Record<string, string>;
-  actorBackgrounds: Record<string, string>;
+  getActorStyle?: SequenceDiagramProps["getActorStyle"];
 };
 
 export function HeaderGrid({
   layout,
   renderActorLabel,
   onActorClick,
-  actorColors,
-  actorBackgrounds,
+  getActorStyle,
 }: HeaderGridProps) {
   const { controller } = useSequenceContext();
   const { highlight, selection } = controller.state;
@@ -114,8 +127,9 @@ export function HeaderGrid({
         row.map((actor) => {
           const highlighted = highlight.actors.has(actor.actorId);
           const selected = selection.actors.has(actor.actorId);
-          const color = actorColors[actor.actorId];
-          const background = actorBackgrounds[actor.actorId];
+          const style = getActorStyle?.(actor);
+          const color = style?.color;
+          const background = style?.backgroundColor;
           const justify =
             actor.alignment === "left"
               ? "justify-start"
@@ -180,14 +194,12 @@ export function HeaderGrid({
 
 export type RegionsProps = {
   layout: SequenceLayout;
-  actorColors: Record<string, string>;
-  actorBackgrounds: Record<string, string>;
+  getActorStyle?: SequenceDiagramProps["getActorStyle"];
 };
 
 export function RegionsLayer({
   layout,
-  actorColors,
-  actorBackgrounds,
+  getActorStyle,
 }: RegionsProps) {
   const regionNodes = [...layout.visibleActors]
     .filter((actor) => actor.hasChildren && actor.expanded)
@@ -199,8 +211,9 @@ export function RegionsLayer({
         const span = layout.spans[actor.actorId];
         const xStart = span.start * COLUMN_WIDTH;
         const xEnd = span.end * COLUMN_WIDTH;
-        const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-        const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.4);
+        const style = getActorStyle?.(actor);
+        const color = style?.color ?? "hsl(215 16% 70%)";
+        const baseFill = style?.backgroundColor ?? softColor(color, 99.4);
         const fill =
           actor.hasChildren && actor.expanded ? softColor(color, 97.5) : baseFill;
 
@@ -223,11 +236,11 @@ export function RegionsLayer({
 
 export type RailsProps = {
   layout: SequenceLayout;
-  actorColors: Record<string, string>;
   activeActors: Set<string>;
+  getActorStyle?: SequenceDiagramProps["getActorStyle"];
 };
 
-export function RailsLayer({ layout, actorColors, activeActors }: RailsProps) {
+export function RailsLayer({ layout, activeActors, getActorStyle }: RailsProps) {
   const { controller } = useSequenceContext();
   const { highlight, selection } = controller.state;
   const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
@@ -238,17 +251,20 @@ export function RailsLayer({ layout, actorColors, activeActors }: RailsProps) {
         const x = layout.anchors[actor.actorId] * COLUMN_WIDTH;
         const highlighted = highlight.actors.has(actor.actorId);
         const selected = selection.actors.has(actor.actorId);
-        const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
+        const style = getActorStyle?.(actor);
+        const base = style?.color ?? "hsl(215 16% 70%)";
         const active =
           selected || highlighted || activeActors.has(actor.actorId);
         const stroke = active ? base : softColor(base, 70);
+        const dashed = style?.railVariant === "dashed" || !active;
 
         return (
           <div
             key={`line-${actor.actorId}`}
             className={cn(
               "absolute inset-y-0 w-[2px]",
-              !active && "border-l border-dashed",
+              dashed && "border-l border-dashed",
+              style?.railClassName,
             )}
             style={{
               left: x,
@@ -266,12 +282,14 @@ export type MessagesProps = {
   resolvedMessages: ResolvedMessage[];
   renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
   onMessageClick?: (messageId: string) => void;
+  getMessageStyle?: SequenceDiagramProps["getMessageStyle"];
 };
 
 export function MessagesLayer({
   resolvedMessages,
   renderMessageLabel,
   onMessageClick,
+  getMessageStyle,
 }: MessagesProps) {
   const { controller } = useSequenceContext();
   const { highlight, selection } = controller.state;
@@ -282,7 +300,8 @@ export function MessagesLayer({
         ({ message, y, fromResolved, toResolved, fromX, toX, direction }) => {
           const left = Math.min(fromX, toX);
           const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
-          const stroke = "#111827"; // neutral black/near-black for all messages
+          const style = getMessageStyle?.(message);
+          const stroke = style?.strokeColor ?? "#111827"; // neutral black/near-black for all messages
           const strokeHighlighted =
             highlight.messages.has(message.messageId) ||
             highlight.actors.has(fromResolved.actorId) ||
@@ -372,10 +391,10 @@ function DiagramCanvas({
   minWidth,
   renderMessageLabel,
   onMessageClick,
-  actorColors,
-  actorBackgrounds,
   resolvedMessages,
   activeActors,
+  getActorStyle,
+  getMessageStyle,
 }: DiagramCanvasProps) {
   const viewWidth = layout.leafCount * COLUMN_WIDTH;
   const height = layout.messageAreaHeight;
@@ -388,20 +407,20 @@ function DiagramCanvas({
       <div className="absolute inset-0" style={{ width: viewWidth }}>
         <RegionsLayer
           layout={layout}
-          actorColors={actorColors}
-          actorBackgrounds={actorBackgrounds}
+          getActorStyle={getActorStyle}
         />
 
         <RailsLayer
           layout={layout}
-          actorColors={actorColors}
           activeActors={activeActors}
+          getActorStyle={getActorStyle}
         />
 
         <MessagesLayer
           resolvedMessages={resolvedMessages}
           renderMessageLabel={renderMessageLabel}
           onMessageClick={onMessageClick}
+          getMessageStyle={getMessageStyle}
         />
       </div>
     </div>
@@ -413,8 +432,8 @@ type DiagramCanvasProps = {
   minWidth: number;
   renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
   onMessageClick?: (messageId: string) => void;
-  actorColors: Record<string, string>;
-  actorBackgrounds: Record<string, string>;
   resolvedMessages: ResolvedMessage[];
   activeActors: Set<string>;
+  getActorStyle?: SequenceDiagramProps["getActorStyle"];
+  getMessageStyle?: SequenceDiagramProps["getMessageStyle"];
 };

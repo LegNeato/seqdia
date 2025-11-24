@@ -3,7 +3,6 @@ import { computeLayout, type SequenceLayout, type VisibleActor } from "../lib/se
 import { COLUMN_WIDTH } from "../lib/constants";
 import { type SequenceController } from "./useSequenceController";
 import { type SequenceDiagramModel } from "../lib/sequence/types";
-import { softColor } from "../lib/utils";
 
 export type ResolvedMessage = {
   message: SequenceDiagramModel["messages"][number];
@@ -17,8 +16,6 @@ export type ResolvedMessage = {
 
 export type LayoutData = {
   layout: SequenceLayout;
-  actorColors: Record<string, string>;
-  actorBackgrounds: Record<string, string>;
   resolvedMessages: ResolvedMessage[];
   activeActors: Set<string>;
 };
@@ -34,24 +31,6 @@ export function useSequenceLayout(
       }),
     [controller.state.expandedActors, model],
   );
-
-  const actorColors = useMemo(() => {
-    const map: Record<string, string> = {};
-    const ids = layout.visibleActors.map((actor) => actor.actorId);
-    ids.forEach((id, idx) => {
-      const hue = ((hashId(id) + idx * 5) % 360).toFixed(1);
-      map[id] = `hsl(${hue} 72% 52%)`;
-    });
-    return map;
-  }, [layout.visibleActors]);
-
-  const actorBackgrounds = useMemo(() => {
-    const map: Record<string, string> = {};
-    Object.entries(actorColors).forEach(([id, color]) => {
-      map[id] = softColor(color, 99.4);
-    });
-    return map;
-  }, [actorColors]);
 
   const leafByStart = useMemo(() => {
     const map = new Map<number, VisibleActor>();
@@ -142,17 +121,7 @@ export function useSequenceLayout(
 
   return {
     layout,
-    actorColors,
-    actorBackgrounds,
     resolvedMessages,
     activeActors,
   };
-}
-
-function hashId(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) % 360;
-  }
-  return (hash + 360) % 360;
 }
