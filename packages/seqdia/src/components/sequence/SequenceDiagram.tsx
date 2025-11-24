@@ -200,7 +200,9 @@ export function RegionsLayer({
         const xStart = span.start * COLUMN_WIDTH;
         const xEnd = span.end * COLUMN_WIDTH;
         const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-        const fill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.4);
+        const baseFill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.4);
+        const fill =
+          actor.hasChildren && actor.expanded ? softColor(color, 97.5) : baseFill;
 
         return (
           <div key={`region-${actor.actorId}`}>
