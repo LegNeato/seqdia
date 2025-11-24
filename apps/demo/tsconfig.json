@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "moduleResolution": "bundler",
+    "paths": {
+      "seqdia": ["../../packages/seqdia/src/index.ts"],
+      "seqdia/*": ["../../packages/seqdia/src/*"]
+    },
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "app/**/*", "**/*.ts", "**/*.tsx", "../../packages/seqdia/src/**/*"],
+  "exclude": ["node_modules"]
+}

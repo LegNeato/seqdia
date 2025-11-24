@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
-import { useSequenceController } from "@/hooks/useSequenceController";
-import { defineLinearDiagram, type SequenceDiagramModel } from "@/lib/sequence/types";
+import { SequenceDiagram } from "../SequenceDiagram";
+import { useSequenceController } from "../../../hooks/useSequenceController";
+import { defineLinearDiagram, type SequenceDiagramModel } from "../../../lib/sequence/types";
 
 const model: SequenceDiagramModel = defineLinearDiagram({
   id: "test-sequence",

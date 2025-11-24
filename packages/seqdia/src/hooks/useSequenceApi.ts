@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useSequenceContext } from "@/components/sequence/SequenceProvider";
+import { useSequenceContext } from "../components/sequence/SequenceProvider";
 import { type SequenceControllerApi } from "./useSequenceController";
 
 export function useSequenceApi(onReady?: (api: SequenceControllerApi) => void) {

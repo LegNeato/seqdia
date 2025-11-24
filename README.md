@@ -15,8 +15,7 @@ Tree-first sequence diagrams for React + Tailwind. Actor labels live in a tree, 
 
 ```bash
 pnpm install
-pnpm dev
-# open http://localhost:3000
+pnpm dev       # runs demo app at http://localhost:3000
 ```
 
 ## Install
@@ -103,6 +102,11 @@ The components are plain React. To use outside Next:
 1) Import from `src/components/sequence/*`, `src/hooks/*`, and `src/lib/sequence/*`.
 2) Swap shadcn/ui wrappers (`Button`, `Card`, etc.) for your design system.
 3) Keep or replace the Tailwind classes as needed.
+
+## Monorepo layout
+
+- `packages/seqdia`: publishable React/Tailwind library (exports components, hooks, types).  
+- `apps/demo`: Next.js demo/docs shell consuming the library via workspace dependency.
 
 ## Testing
 

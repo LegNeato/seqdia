@@ -6,15 +6,15 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   SequenceProvider,
   useSequenceContext,
-} from "@/components/sequence/SequenceProvider";
-import type { SequenceController } from "@/hooks/useSequenceController";
-import { computeLayout, type VisibleActor } from "@/lib/sequence/layout";
+} from "./SequenceProvider";
+import type { SequenceController } from "../../hooks/useSequenceController";
+import { computeLayout, type VisibleActor } from "../../lib/sequence/layout";
 import type {
   SequenceDiagramModel,
   ActorNode,
   SequenceMessage,
-} from "@/lib/sequence/types";
-import { cn } from "@/lib/utils";
+} from "../../lib/sequence/types";
+import { cn } from "../../lib/utils";
 import {
   Card,
   CardContent,

@@ -2,8 +2,8 @@ import { createContext, useContext, type ReactNode } from "react";
 import {
   useSequenceController,
   type SequenceController,
-} from "@/hooks/useSequenceController";
-import { type SequenceDiagramModel } from "@/lib/sequence/types";
+} from "../../hooks/useSequenceController";
+import { type SequenceDiagramModel } from "../../lib/sequence/types";
 
 type SequenceContextValue = {
   model: SequenceDiagramModel;

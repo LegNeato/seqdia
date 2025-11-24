@@ -4,8 +4,8 @@ import {
   defaultSelectionState,
   type HighlightState,
   type SelectionState,
-} from "@/lib/sequence/state";
-import { type ActorNode, type SequenceDiagramModel } from "@/lib/sequence/types";
+} from "../lib/sequence/state";
+import { type ActorNode, type SequenceDiagramModel } from "../lib/sequence/types";
 
 export type SequenceControllerApi = {
   highlightActors: (actorId: string | string[]) => void;

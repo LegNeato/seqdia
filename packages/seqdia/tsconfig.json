@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "baseUrl": "./src",
+    "noEmit": true,
+    "paths": {
+      "*": ["*"],
+      "seqdia": ["./index.ts"],
+      "seqdia/*": ["./*"]
+    }
+  },
+  "include": ["src/**/*", "../..//vitest.setup.ts", "../..//vitest.config.mts"],
+  "exclude": ["node_modules", "dist"]
+}

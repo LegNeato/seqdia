@@ -4,11 +4,8 @@ import animate from "tailwindcss-animate";
 const config: Config = {
   darkMode: ["class"],
   content: [
-    "./src/app/**/*.{ts,tsx}",
-    "./src/components/**/*.{ts,tsx}",
-    "./src/hooks/**/*.{ts,tsx}",
-    "./src/lib/**/*.{ts,tsx}",
-    "./src/ui/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "../../packages/seqdia/src/**/*.{ts,tsx}",
   ],
   theme: {
     container: {

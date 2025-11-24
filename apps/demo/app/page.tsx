@@ -3,22 +3,20 @@
 import { useMemo } from "react";
 import { Layers3, RefreshCw } from "lucide-react";
 
-import { SequenceDiagram } from "@/components/sequence/SequenceDiagram";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  SequenceDiagram,
+  useSequenceController,
+  defineLeafDiagram,
+  type ActorNode,
+  type SequenceDiagramModel,
+  Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { useSequenceController } from "@/hooks/useSequenceController";
-import {
-  type ActorNode,
-  defineLeafDiagram,
-  type SequenceDiagramModel,
-} from "@/lib/sequence/types";
+} from "seqdia";
 
 function collectActorIds(actors: ActorNode[]): string[] {
   return actors.flatMap((actor) => [
