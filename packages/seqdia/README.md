@@ -6,8 +6,7 @@ React/Tailwind components for tree-based sequence diagrams. Works in any React a
 
 ```bash
 pnpm add seqdia react react-dom
-# styling deps used by the components:
-pnpm add clsx tailwind-merge class-variance-authority @radix-ui/react-slot
+# the package bundles its helper deps; ensure your app has Tailwind (or matching CSS) so the classes render
 ```
 
 ## Usage

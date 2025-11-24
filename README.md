@@ -22,13 +22,13 @@ pnpm dev       # runs demo app at http://localhost:3000
 
 ```bash
 pnpm install
-# library deps (React + Tailwind helpers)
-pnpm add seqdia react react-dom clsx tailwind-merge class-variance-authority @radix-ui/react-slot
+# library + peers
+pnpm add seqdia react react-dom
 # demo (Next.js) shell
 pnpm add next
 ```
 
-The library ships only the core diagram primitives/hooks; you bring your own UI shell/styling. The demo uses local shadcn-style components.
+The library bundles its class helpers (`clsx`, `tailwind-merge`, `class-variance-authority`, `@radix-ui/react-slot`, `tailwindcss-animate`); you still need Tailwind (or equivalent CSS) in your app so the utility classes take effect. The demo uses local shadcn-style components for the shell.
 
 ## Usage
 
