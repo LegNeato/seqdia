@@ -364,8 +364,7 @@ const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } 
 return (
   <div style={{ minWidth: layout.leafCount * 140 }}>
     <HeaderGrid
-      layout={{ ...layout, gridTemplate: \
-        \\\`repeat(\\${layout.leafCount}, 140px)\\\` }}
+      layout={{ ...layout, gridTemplate: "repeat(${layout.leafCount}, 140px)" }}
       actorColors={actorColors}
       actorBackgrounds={actorBackgrounds}
     />
