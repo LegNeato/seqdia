@@ -9,8 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "VITE_CJS_TRACE=false vitest run",
+    "test:watch": "VITE_CJS_TRACE=false vitest"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
