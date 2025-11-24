@@ -21,14 +21,12 @@ pnpm dev       # runs demo app at http://localhost:3000
 ## Install
 
 ```bash
-pnpm install
-# library + peers
 pnpm add seqdia react react-dom
-# demo (Next.js) shell
+# demo (Next.js) shell, if you want it
 pnpm add next
 ```
 
-The library bundles its class helpers (`clsx`, `tailwind-merge`, `class-variance-authority`, `@radix-ui/react-slot`, `tailwindcss-animate`); you still need Tailwind (or equivalent CSS) in your app so the utility classes take effect. The demo uses local shadcn-style components for the shell.
+Bring your own UI shell/styles. Tailwind (or equivalent CSS) is needed so the utility classes in the components resolve; the demo uses local shadcn-style wrappers.
 
 ## Usage
 

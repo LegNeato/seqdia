@@ -6,7 +6,6 @@ React/Tailwind components for tree-based sequence diagrams. Works in any React a
 
 ```bash
 pnpm add seqdia react react-dom
-# the package bundles its helper deps; ensure your app has Tailwind (or matching CSS) so the classes render
 ```
 
 ## Usage
@@ -42,6 +41,8 @@ Key helpers:
 - `defineLinearDiagram` enforces a continuous message chain.
 - `deriveVisibleMessages` maps canonical leaf messages to the current expanded/collapsed view.
 - `HeaderGrid`, `RegionsLayer`, `RailsLayer`, `MessagesLayer`, and `useSequenceLayout` let you compose your own surface with custom shells/styling.
+
+> Tailwind (or equivalent CSS) is expected in the consumer app so the utility classes render; the library does not ship UI wrappers.
 
 ## Scripts
 
