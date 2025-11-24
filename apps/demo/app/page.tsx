@@ -256,21 +256,20 @@ export default function Home() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Behaviors from the PRD</CardTitle>
+            <CardTitle>What you get</CardTitle>
             <CardDescription>
-              Column count follows visible leaves. Messages disappear when
-              endpoints or ancestors are collapsed.
+              Expandable groups, leaf-only message anchors, and highlight/selection APIs.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
             <div className="space-y-2">
               <p className="text-foreground text-sm font-semibold">
-                Layout rules demonstrated
+                End-user features
               </p>
               <ul className="list-disc space-y-1 pl-4">
-                <li>Header rows per depth with spans based on visible leaves.</li>
-                <li>Region boundaries for expanded nodes; single lines for collapsed nodes.</li>
-                <li>Messages hide when endpoints or ancestors are not visible.</li>
+                <li>Expand/collapse any branch; columns recompute from visible leaves.</li>
+                <li>Grouping rails hide when expanded; messages reroute to leaf actors.</li>
+                <li>Highlight or select actors/messages with your own styling.</li>
               </ul>
             </div>
             <div className="rounded-lg border bg-muted/40 p-3 text-xs">
