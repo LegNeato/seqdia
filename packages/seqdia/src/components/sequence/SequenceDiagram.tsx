@@ -8,45 +8,11 @@ import {
   useSequenceContext,
 } from "./SequenceProvider";
 import type { SequenceController } from "../../hooks/useSequenceController";
-import { computeLayout, type VisibleActor } from "../../lib/sequence/layout";
-import type {
-  SequenceDiagramModel,
-  ActorNode,
-  SequenceMessage,
-} from "../../lib/sequence/types";
-import { cn } from "../../lib/utils";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-
-const COLUMN_WIDTH = 140;
-function softColor(color: string, lightness: number) {
-  const match = /hsl\(\s*([-\d.]+)\s+([-\d.]+)%\s+([-\d.]+)%/.exec(color);
-  if (!match) return color;
-  const [, h, s] = match;
-  const safeLightness = Math.min(Math.max(lightness, 0), 100);
-  const safeSat = Math.min(Math.max(parseFloat(s), 0), 100);
-  return `hsl(${parseFloat(h)} ${safeSat}% ${safeLightness}%)`;
-}
-
-function collectActorIds(nodes: ActorNode[]): string[] {
-  return nodes.flatMap((node) => [
-    node.actorId,
-    ...collectActorIds(node.children ?? []),
-  ]);
-}
-
-function hueFromId(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) % 360;
-  }
-  return (hash + 360) % 360;
-}
+import { useSequenceLayout, type ResolvedMessage } from "../../hooks/useSequenceLayout";
+import { type SequenceDiagramModel, type SequenceMessage } from "../../lib/sequence/types";
+import { COLUMN_WIDTH } from "../../lib/constants";
+import { cn, softColor } from "../../lib/utils";
+import type { SequenceLayout, VisibleActor } from "../../lib/sequence/layout";
 
 type SequenceDiagramProps = {
   model: SequenceDiagramModel;
@@ -58,34 +24,20 @@ type SequenceDiagramProps = {
   onMessageClick?: (messageId: string) => void;
 };
 
-export function SequenceDiagram({
-  model,
-  controller,
-  className,
-  renderActorLabel,
-  renderMessageLabel,
-  onActorClick,
-  onMessageClick,
-}: SequenceDiagramProps) {
+/**
+ * Default composition of the header, rails, regions, and messages.
+ * Consumers can import and compose the layers directly.
+ */
+export function SequenceDiagram(props: SequenceDiagramProps) {
   return (
-    <SequenceProvider model={model} controller={controller}>
-      <SequenceSurface
-        className={className}
-        renderActorLabel={renderActorLabel}
-        renderMessageLabel={renderMessageLabel}
-        onActorClick={onActorClick}
-        onMessageClick={onMessageClick}
-      />
+    <SequenceProvider model={props.model} controller={props.controller}>
+      <SequenceSurface {...props} />
     </SequenceProvider>
   );
 }
 
-type SurfaceProps = {
-  className?: string;
-  renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
-  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
-  onActorClick?: (actorId: string) => void;
-  onMessageClick?: (messageId: string) => void;
+type SurfaceProps = SequenceDiagramProps & {
+  controller?: SequenceController;
 };
 
 function SequenceSurface({
@@ -96,81 +48,51 @@ function SequenceSurface({
   onMessageClick,
 }: SurfaceProps) {
   const { model, controller } = useSequenceContext();
-
-  const layout = useMemo(
-    () =>
-      computeLayout(model, {
-        expandedActorIds: controller.state.expandedActors,
-      }),
-    [controller.state.expandedActors, model],
-  );
+  const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } =
+    useSequenceLayout(model, controller);
 
   const gridTemplate = useMemo(
     () => `repeat(${layout.leafCount}, ${COLUMN_WIDTH}px)`,
     [layout.leafCount],
   );
   const minWidth = layout.leafCount * COLUMN_WIDTH;
-  const actorColors = useMemo(() => {
-    const map: Record<string, string> = {};
-    const ids = Array.from(new Set(collectActorIds(model.actors)));
-    ids.forEach((id, idx) => {
-      const hue = (hueFromId(id) + idx * 5) % 360;
-      map[id] = `hsl(${hue.toFixed(1)} 72% 52%)`;
-    });
-    return map;
-  }, [model.actors]);
-  const actorBackgrounds = useMemo(() => {
-    const map: Record<string, string> = {};
-    Object.entries(actorColors).forEach(([id, color]) => {
-      map[id] = softColor(color, 94);
-    });
-    return map;
-  }, [actorColors]);
 
   return (
-    <Card className={cn("overflow-hidden border-border/80", className)}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          {model.title ?? "Sequence diagram"}
-        </CardTitle>
-        {model.description && (
-          <CardDescription>{model.description}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="w-full overflow-x-auto">
-          <div style={{ minWidth }}>
-            <HeaderGrid
-              layout={{ ...layout, gridTemplate }}
-              onActorClick={onActorClick}
-              renderActorLabel={renderActorLabel}
-              actorColors={actorColors}
-              actorBackgrounds={actorBackgrounds}
-            />
-            <DiagramCanvas
-              layout={layout}
-              minWidth={minWidth}
-              renderMessageLabel={renderMessageLabel}
-              onMessageClick={onMessageClick}
-              actorColors={actorColors}
-              actorBackgrounds={actorBackgrounds}
-            />
-          </div>
+    <div className={cn("overflow-hidden", className)}>
+      <div className="w-full overflow-x-auto">
+        <div style={{ minWidth }}>
+          <HeaderGrid
+            layout={{ ...layout, gridTemplate }}
+            onActorClick={onActorClick}
+            renderActorLabel={renderActorLabel}
+            actorColors={actorColors}
+            actorBackgrounds={actorBackgrounds}
+          />
+          <DiagramCanvas
+            layout={layout}
+            minWidth={minWidth}
+            renderMessageLabel={renderMessageLabel}
+            onMessageClick={onMessageClick}
+            actorColors={actorColors}
+            actorBackgrounds={actorBackgrounds}
+            resolvedMessages={resolvedMessages}
+            activeActors={activeActors}
+          />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
-type HeaderGridProps = {
-  layout: ReturnType<typeof computeLayout> & { gridTemplate: string };
+export type HeaderGridProps = {
+  layout: SequenceLayout & { gridTemplate: string };
   renderActorLabel?: (actor: VisibleActor) => React.ReactNode;
   onActorClick?: (actorId: string) => void;
   actorColors: Record<string, string>;
   actorBackgrounds: Record<string, string>;
 };
 
-function HeaderGrid({
+export function HeaderGrid({
   layout,
   renderActorLabel,
   onActorClick,
@@ -215,8 +137,8 @@ function HeaderGrid({
                   type="button"
                   onClick={() => {
                     if (actor.hasChildren) {
-                    controller.toggleActorExpansion(actor.actorId);
-                  }
+                      controller.toggleActorExpansion(actor.actorId);
+                    }
                     controller.toggleActorSelection(actor.actorId);
                     onActorClick?.(actor.actorId);
                   }}
@@ -256,175 +178,106 @@ function HeaderGrid({
   );
 }
 
-type DiagramCanvasProps = {
-  layout: ReturnType<typeof computeLayout>;
-  minWidth: number;
-  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
-  onMessageClick?: (messageId: string) => void;
+export type RegionsProps = {
+  layout: SequenceLayout;
   actorColors: Record<string, string>;
   actorBackgrounds: Record<string, string>;
 };
 
-function DiagramCanvas({
+export function RegionsLayer({
   layout,
-  minWidth,
-  renderMessageLabel,
-  onMessageClick,
   actorColors,
   actorBackgrounds,
-}: DiagramCanvasProps) {
-  const { controller } = useSequenceContext();
-  const { highlight, selection } = controller.state;
-
-  const viewWidth = layout.leafCount * COLUMN_WIDTH;
-  const height = layout.messageAreaHeight;
-  const actorMap = layout.visibleActorMap;
-  const leafByStart = useMemo(() => {
-    const map = new Map<number, VisibleActor>();
-    layout.visibleActors
-      .filter((actor) => actor.isLeaf)
-      .forEach((actor) => map.set(actor.leafStart, actor));
-    return map;
-  }, [layout.visibleActors]);
-  const leafByEnd = useMemo(() => {
-    const map = new Map<number, VisibleActor>();
-    layout.visibleActors
-      .filter((actor) => actor.isLeaf)
-      .forEach((actor) => map.set(actor.leafEnd, actor));
-    return map;
-  }, [layout.visibleActors]);
-
-  const resolveEndpoint = useMemo(
-    () =>
-      (
-        actorId: string,
-        toward: "left" | "right",
-      ): { anchor: number; actorId: string } => {
-        const actor = actorMap[actorId];
-        if (actor && actor.hasChildren && actor.expanded) {
-          const leaf =
-            toward === "right"
-              ? leafByEnd.get(actor.leafEnd)
-              : leafByStart.get(actor.leafStart);
-          if (leaf) {
-            return {
-              anchor: layout.anchors[leaf.actorId] * COLUMN_WIDTH,
-              actorId: leaf.actorId,
-            };
-          }
-        }
-        const span = layout.spans[actorId];
-        const width = span.end - span.start;
-        if (width > 1) {
-          const anchor =
-            toward === "right"
-              ? span.end * COLUMN_WIDTH
-              : span.start * COLUMN_WIDTH;
-          return { anchor, actorId };
-        }
-        return { anchor: layout.anchors[actorId] * COLUMN_WIDTH, actorId };
-      },
-    [actorMap, layout.anchors, layout.spans, leafByEnd, leafByStart],
-  );
-
-  const resolvedMessages = useMemo(() => {
-    const last = new Map<string, number>();
-    return layout.messages.map(({ message, y }) => {
-      const toAnchor =
-        layout.anchors[message.toActorId] * COLUMN_WIDTH;
-      const directionHint =
-        toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;
-      const fromResolved = resolveEndpoint(
-        message.fromActorId,
-        directionHint > 0 ? "right" : "left",
-      );
-      const toResolved = resolveEndpoint(
-        message.toActorId,
-        directionHint > 0 ? "left" : "right",
-      );
-      const previousFrom = last.get(fromResolved.actorId);
-      const fromX = previousFrom ?? fromResolved.anchor;
-      const toX = toResolved.anchor;
-      const direction = toX >= fromX ? 1 : -1;
-      last.set(toResolved.actorId, toX);
-      return {
-        message,
-        y,
-        fromResolved,
-        toResolved,
-        fromX,
-        toX,
-        direction,
-      };
-    });
-  }, [layout.anchors, layout.messages, resolveEndpoint]);
-
-  const activeActors = useMemo(() => {
-    const set = new Set<string>();
-    resolvedMessages.forEach((entry) => {
-      set.add(entry.fromResolved.actorId);
-      set.add(entry.toResolved.actorId);
-    });
-    return set;
-  }, [resolvedMessages]);
-
+}: RegionsProps) {
   const regionNodes = [...layout.visibleActors]
     .filter((actor) => actor.hasChildren && actor.expanded)
     .sort((a, b) => a.depth - b.depth);
-  const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
+
   return (
-    <div
-      className="relative"
-      style={{ minWidth, height }}
-    >
-      <div className="absolute inset-0" style={{ width: viewWidth }}>
-        {regionNodes.map((actor) => {
-          const span = layout.spans[actor.actorId];
-          const xStart = span.start * COLUMN_WIDTH;
-          const xEnd = span.end * COLUMN_WIDTH;
-          const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-          const fill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.4);
+    <>
+      {regionNodes.map((actor) => {
+        const span = layout.spans[actor.actorId];
+        const xStart = span.start * COLUMN_WIDTH;
+        const xEnd = span.end * COLUMN_WIDTH;
+        const color = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
+        const fill = actorBackgrounds[actor.actorId] ?? softColor(color, 99.4);
 
-          return (
-            <div key={`region-${actor.actorId}`}>
-              <div
-                className={cn("absolute inset-y-0", actor.regionClassName)}
-                style={{
-                  left: xStart,
-                  width: xEnd - xStart,
-                  background: fill,
-                }}
-              />
-            </div>
-          );
-        })}
-
-        {leafNodes.map((actor) => {
-          const x = layout.anchors[actor.actorId] * COLUMN_WIDTH;
-          const highlighted = highlight.actors.has(actor.actorId);
-          const selected = selection.actors.has(actor.actorId);
-          const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
-          const active =
-            selected || highlighted || activeActors.has(actor.actorId);
-          const stroke = active ? base : softColor(base, 70);
-
-          return (
+        return (
+          <div key={`region-${actor.actorId}`}>
             <div
-              key={`line-${actor.actorId}`}
-              className={cn(
-                "absolute inset-y-0 w-[2px]",
-                !active && "border-l border-dashed",
-              )}
+              className={cn("absolute inset-y-0", actor.regionClassName)}
               style={{
-                left: x,
-                backgroundColor: active ? stroke : undefined,
-                borderColor: active ? undefined : stroke,
+                left: xStart,
+                width: xEnd - xStart,
+                background: fill,
               }}
             />
-          );
-        })}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
-        {resolvedMessages.map(({ message, y, fromResolved, toResolved, fromX, toX, direction }) => {
+export type RailsProps = {
+  layout: SequenceLayout;
+  actorColors: Record<string, string>;
+  activeActors: Set<string>;
+};
+
+export function RailsLayer({ layout, actorColors, activeActors }: RailsProps) {
+  const { controller } = useSequenceContext();
+  const { highlight, selection } = controller.state;
+  const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
+
+  return (
+    <>
+      {leafNodes.map((actor) => {
+        const x = layout.anchors[actor.actorId] * COLUMN_WIDTH;
+        const highlighted = highlight.actors.has(actor.actorId);
+        const selected = selection.actors.has(actor.actorId);
+        const base = actorColors[actor.actorId] ?? "hsl(215 16% 70%)";
+        const active =
+          selected || highlighted || activeActors.has(actor.actorId);
+        const stroke = active ? base : softColor(base, 70);
+
+        return (
+          <div
+            key={`line-${actor.actorId}`}
+            className={cn(
+              "absolute inset-y-0 w-[2px]",
+              !active && "border-l border-dashed",
+            )}
+            style={{
+              left: x,
+              backgroundColor: active ? stroke : undefined,
+              borderColor: active ? undefined : stroke,
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+export type MessagesProps = {
+  resolvedMessages: ResolvedMessage[];
+  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
+  onMessageClick?: (messageId: string) => void;
+};
+
+export function MessagesLayer({
+  resolvedMessages,
+  renderMessageLabel,
+  onMessageClick,
+}: MessagesProps) {
+  const { controller } = useSequenceContext();
+  const { highlight, selection } = controller.state;
+
+  return (
+    <>
+      {resolvedMessages.map(
+        ({ message, y, fromResolved, toResolved, fromX, toX, direction }) => {
           const left = Math.min(fromX, toX);
           const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
           const stroke = "#111827"; // neutral black/near-black for all messages
@@ -506,8 +359,60 @@ function DiagramCanvas({
               </div>
             </div>
           );
-        })}
+        },
+      )}
+    </>
+  );
+}
+
+function DiagramCanvas({
+  layout,
+  minWidth,
+  renderMessageLabel,
+  onMessageClick,
+  actorColors,
+  actorBackgrounds,
+  resolvedMessages,
+  activeActors,
+}: DiagramCanvasProps) {
+  const viewWidth = layout.leafCount * COLUMN_WIDTH;
+  const height = layout.messageAreaHeight;
+
+  return (
+    <div
+      className="relative"
+      style={{ minWidth, height }}
+    >
+      <div className="absolute inset-0" style={{ width: viewWidth }}>
+        <RegionsLayer
+          layout={layout}
+          actorColors={actorColors}
+          actorBackgrounds={actorBackgrounds}
+        />
+
+        <RailsLayer
+          layout={layout}
+          actorColors={actorColors}
+          activeActors={activeActors}
+        />
+
+        <MessagesLayer
+          resolvedMessages={resolvedMessages}
+          renderMessageLabel={renderMessageLabel}
+          onMessageClick={onMessageClick}
+        />
       </div>
     </div>
   );
 }
+
+type DiagramCanvasProps = {
+  layout: SequenceLayout;
+  minWidth: number;
+  renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
+  onMessageClick?: (messageId: string) => void;
+  actorColors: Record<string, string>;
+  actorBackgrounds: Record<string, string>;
+  resolvedMessages: ResolvedMessage[];
+  activeActors: Set<string>;
+};
