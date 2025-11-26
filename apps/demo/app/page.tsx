@@ -315,36 +315,40 @@ export default function Home() {
               a group to reveal child actors, collapse to roll messages up to the parent.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={highlightHappyPath} size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
-              Highlight happy path
-            </Button>
-            <Button onClick={spotlightInfra} variant="outline" size="sm">
-              Highlight backend actors
-            </Button>
-            <Button onClick={expandAll} variant="outline" size="sm">
-              Expand everything
-            </Button>
-            <Button onClick={collapseNested} variant="outline" size="sm">
-              Collapse auth + payments
-            </Button>
-            <Button onClick={clear} variant="ghost" size="sm">
-              <RefreshCw className="mr-1 h-3 w-3" />
-              Clear
-            </Button>
-          </div>
         </header>
 
         <Card className="overflow-hidden border-border/80">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              Checkout orchestration
-            </CardTitle>
-            <CardDescription>
-              Expand groups to reroute messages to their leaf actors; rails hide when expanded.
-            </CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  Live example
+                </CardTitle>
+                <CardDescription>
+                  Click actor headers to expand/collapse groups. Try the controls to see highlighting and selection in action.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button onClick={highlightHappyPath} size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+                  Highlight path
+                </Button>
+                <Button onClick={spotlightInfra} variant="outline" size="sm">
+                  Highlight backend
+                </Button>
+                <Button onClick={expandAll} variant="outline" size="sm">
+                  Expand all
+                </Button>
+                <Button onClick={collapseNested} variant="outline" size="sm">
+                  Collapse groups
+                </Button>
+                <Button onClick={clear} variant="ghost" size="sm">
+                  <RefreshCw className="mr-1 h-3 w-3" />
+                  Clear
+                </Button>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             <SequenceDiagram
               model={checkoutModel}
               controller={controller}
@@ -352,9 +356,9 @@ export default function Home() {
               getMessageStyle={getMessageStyle}
               renderActor={renderActorButton}
               renderMessage={renderMessageBubble}
-              className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm"
-              headerClassName="grid gap-2 border-b border-border/80 bg-white py-3"
-              canvasClassName="relative bg-white"
+              className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm p-4"
+              headerClassName="grid gap-2 border-b border-border/80 bg-white py-3 px-2"
+              canvasClassName="relative bg-white py-4"
             />
           </CardContent>
         </Card>
