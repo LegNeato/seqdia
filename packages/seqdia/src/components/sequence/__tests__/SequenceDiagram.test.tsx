@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 
 import { SequenceDiagram } from "../SequenceDiagram";
 import { useSequenceController } from "../../../hooks/useSequenceController";
@@ -56,6 +57,30 @@ function Harness() {
   );
 }
 
+function HarnessWithEvents({
+  onSelectionChange,
+  onHighlightChange,
+}: {
+  onSelectionChange?: ReturnType<typeof vi.fn>;
+  onHighlightChange?: ReturnType<typeof vi.fn>;
+}) {
+  const controller = useSequenceController(model);
+
+  return (
+    <div>
+      <button onClick={() => controller.highlightMessages("m1")}>
+        highlight message
+      </button>
+      <SequenceDiagram
+        model={model}
+        controller={controller}
+        onSelectionChange={onSelectionChange}
+        onHighlightChange={onHighlightChange}
+      />
+    </div>
+  );
+}
+
 describe("SequenceDiagram", () => {
   it("highlights messages via API calls", async () => {
     render(<Harness />);
@@ -81,5 +106,31 @@ describe("SequenceDiagram", () => {
     expect(
       document.querySelector('[data-message-id="m2"]'),
     ).toBeInTheDocument();
+  });
+
+  it("emits selection and highlight change callbacks", async () => {
+    const onSelectionChange = vi.fn();
+    const onHighlightChange = vi.fn();
+    render(
+      <HarnessWithEvents
+        onSelectionChange={onSelectionChange}
+        onHighlightChange={onHighlightChange}
+      />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      document.querySelector('[data-actor-id="leaf-a"]') as HTMLElement,
+    );
+
+    expect(onSelectionChange).toHaveBeenCalled();
+    const selection = onSelectionChange.mock.calls.at(-1)?.[0];
+    expect(selection.actors.has("leaf-a")).toBe(true);
+
+    await user.click(screen.getByText("highlight message"));
+
+    expect(onHighlightChange).toHaveBeenCalled();
+    const highlight = onHighlightChange.mock.calls.at(-1)?.[0];
+    expect(highlight.messages.has("m1")).toBe(true);
   });
 });

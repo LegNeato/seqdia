@@ -1,16 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { Layers3, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import {
   SequenceDiagram,
+  MessageArrow,
+  MessageLabel,
   useSequenceController,
   defineLeafDiagram,
   type ActorNode,
   type SequenceDiagramModel,
+  type VisibleActor,
+  type SequenceMessage,
+  type ActorRenderProps,
+  type MessageRenderProps,
 } from "seqdia";
-import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -19,6 +24,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { CodeBlock } from "../components/ui/code-block";
+import { cn } from "../lib/utils";
 
 function collectActorIds(actors: readonly ActorNode[]): string[] {
   return actors.flatMap((actor) => [
@@ -68,13 +75,13 @@ const checkoutModel: SequenceDiagramModel = defineLeafDiagram({
     {
       messageId: "auth-session",
       fromActorId: "frontend",
-      toActorId: "auth",
-      label: "Authenticate session",
+      toActorId: "session",
+      label: "Authenticate",
       rowIndex: 1,
     },
     {
       messageId: "profile-lookup",
-      fromActorId: "auth",
+      fromActorId: "session",
       toActorId: "database",
       label: "Load profile",
       rowIndex: 2,
@@ -82,103 +89,185 @@ const checkoutModel: SequenceDiagramModel = defineLeafDiagram({
     {
       messageId: "profile-return",
       fromActorId: "database",
-      toActorId: "auth",
+      toActorId: "session",
       label: "Profile ready",
       rowIndex: 3,
     },
     {
       messageId: "issue-session",
-      fromActorId: "auth",
-      toActorId: "session",
-      label: "Issue tokens",
-      rowIndex: 4,
-    },
-    {
-      messageId: "audit-session",
       fromActorId: "session",
       toActorId: "audit",
-      label: "Log session",
-      rowIndex: 5,
+      label: "Log auth",
+      rowIndex: 4,
     },
     {
       messageId: "audit-ack",
       fromActorId: "audit",
-      toActorId: "auth",
-      label: "Ack auth",
-      rowIndex: 6,
-    },
-    {
-      messageId: "auth-ok",
-      fromActorId: "auth",
       toActorId: "frontend",
       label: "Auth complete",
-      rowIndex: 7,
+      rowIndex: 5,
     },
     {
       messageId: "intent",
       fromActorId: "frontend",
-      toActorId: "payments",
+      toActorId: "orchestrator",
       label: "Create intent",
-      rowIndex: 8,
+      rowIndex: 6,
     },
     {
       messageId: "persist-intent",
-      fromActorId: "payments",
+      fromActorId: "orchestrator",
       toActorId: "database",
       label: "Persist intent",
-      rowIndex: 9,
+      rowIndex: 7,
     },
     {
       messageId: "intent-stored",
       fromActorId: "database",
-      toActorId: "payments",
+      toActorId: "orchestrator",
       label: "Intent stored",
-      rowIndex: 10,
+      rowIndex: 8,
     },
     {
       messageId: "stripe-call",
-      fromActorId: "payments",
+      fromActorId: "orchestrator",
       toActorId: "stripe",
       label: "Call Stripe",
-      rowIndex: 11,
+      rowIndex: 9,
     },
     {
       messageId: "fraud-check",
       fromActorId: "stripe",
       toActorId: "fraud",
-      label: "Share risk",
-      rowIndex: 12,
+      label: "Check risk",
+      rowIndex: 10,
     },
     {
       messageId: "fraud-return",
       fromActorId: "fraud",
       toActorId: "stripe",
-      label: "Risk verdict",
-      rowIndex: 13,
+      label: "Risk ok",
+      rowIndex: 11,
     },
     {
       messageId: "stripe-ok",
       fromActorId: "stripe",
-      toActorId: "payments",
-      label: "Stripe ok",
-      rowIndex: 14,
+      toActorId: "orchestrator",
+      label: "Payment ok",
+      rowIndex: 12,
     },
     {
       messageId: "confirm",
-      fromActorId: "payments",
+      fromActorId: "orchestrator",
       toActorId: "frontend",
-      label: "Confirm payment",
-      rowIndex: 15,
+      label: "Confirm",
+      rowIndex: 13,
     },
     {
       messageId: "render",
       fromActorId: "frontend",
       toActorId: "browser",
       label: "Render receipt",
-      rowIndex: 16,
+      rowIndex: 14,
     },
   ] as const,
 } as const);
+
+// Tailwind-based color palette using HSL for consistency with shadcn theme
+const palette: Record<string, string> = {
+  // Client layer - slate
+  browser: "hsl(215 25% 27%)",
+  // Frontend layer - blue
+  frontend: "hsl(217 91% 60%)",
+  // Auth group - violet spectrum
+  auth: "hsl(258 90% 66%)",
+  session: "hsl(258 90% 73%)",
+  audit: "hsl(258 90% 82%)",
+  // Payments group - emerald spectrum
+  payments: "hsl(160 84% 39%)",
+  orchestrator: "hsl(160 84% 52%)",
+  stripe: "hsl(160 84% 67%)",
+  fraud: "hsl(160 79% 79%)",
+  // Database - amber
+  database: "hsl(38 92% 50%)",
+};
+
+const getActorStyle = (actor: VisibleActor) => {
+  const color = palette[actor.actorId] ?? "#111827";
+  return {
+    color,
+    regionClassName: "rounded-lg border border-slate-200/60",
+  };
+};
+
+const getMessageStyle = (message: SequenceMessage) => ({
+  strokeColor: palette[message.fromActorId] ?? "#111827",
+});
+
+function renderActorButton({
+  actor,
+  buttonProps,
+  highlighted,
+  selected,
+  label,
+}: ActorRenderProps) {
+  return (
+    <button
+      {...buttonProps}
+      className={cn(
+        "flex min-h-9 items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-semibold shadow-sm transition",
+        highlighted && "ring-1 ring-blue-500 text-blue-600",
+        selected && "ring-2 ring-blue-600 ring-offset-1",
+      )}
+    >
+      {actor.hasChildren && (
+        <span className="text-muted-foreground">
+          {actor.expanded ? "▾" : "▸"}
+        </span>
+      )}
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
+function renderMessageBubble({
+  resolved,
+  highlighted,
+  selected,
+  label,
+  messageProps,
+  style,
+}: MessageRenderProps) {
+  const stroke = style?.strokeColor ?? "#111827";
+  return (
+    <div
+      {...messageProps}
+      className={cn("group", messageProps.className)}
+      style={{
+        ...(messageProps.style ?? {}),
+        cursor: "pointer",
+      }}
+    >
+      <MessageArrow direction={resolved.direction} stroke={stroke} />
+      <div className="pointer-events-none mt-1 flex w-full justify-center">
+        <MessageLabel
+          highlighted={highlighted}
+          selected={selected}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-foreground shadow-sm ring-1 ring-slate-200",
+            highlighted && "ring-blue-500/60 text-blue-600",
+            selected && "ring-2 ring-blue-600",
+          )}
+        >
+          <span className="max-w-[260px] truncate">{label}</span>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            {resolved.fromResolved.actorId} → {resolved.toResolved.actorId}
+          </span>
+        </MessageLabel>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const controller = useSequenceController(checkoutModel);
@@ -216,38 +305,32 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <main className="container flex max-w-5xl flex-col gap-8 py-12">
         <header className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-primary">SeqDia</p>
-              <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
-                Tree-driven sequence diagrams for React + Tailwind
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Columns come from visible leaves. Expand nodes anywhere to
-                reshape the grid and recompute anchors.
-              </p>
-            </div>
-            <Badge variant="secondary" className="flex items-center gap-2">
-              <Layers3 className="h-4 w-4" />
-              Arbitrary depth
-            </Badge>
+          <div>
+            <p className="text-sm font-semibold text-primary">SeqDia</p>
+            <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
+              Interactive sequence diagrams for React
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
+              Model actors as a tree with collapsible groups. Messages route to visible leaves—expand
+              a group to reveal child actors, collapse to roll messages up to the parent.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={highlightHappyPath} variant="default">
+            <Button onClick={highlightHappyPath} size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
               Highlight happy path
             </Button>
-            <Button onClick={spotlightInfra} variant="outline">
+            <Button onClick={spotlightInfra} variant="outline" size="sm">
               Highlight backend actors
             </Button>
-            <Button onClick={expandAll} variant="secondary">
+            <Button onClick={expandAll} variant="outline" size="sm">
               Expand everything
             </Button>
-            <Button onClick={collapseNested} variant="outline">
+            <Button onClick={collapseNested} variant="outline" size="sm">
               Collapse auth + payments
             </Button>
-            <Button onClick={clear} variant="ghost">
-              <RefreshCw className="mr-1 h-4 w-4" />
-              Clear highlight/selection
+            <Button onClick={clear} variant="ghost" size="sm">
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Clear
             </Button>
           </div>
         </header>
@@ -262,120 +345,165 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
-            <SequenceDiagram model={checkoutModel} controller={controller} />
+            <SequenceDiagram
+              model={checkoutModel}
+              controller={controller}
+              getActorStyle={getActorStyle}
+              getMessageStyle={getMessageStyle}
+              renderActor={renderActorButton}
+              renderMessage={renderMessageBubble}
+              className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm"
+              headerClassName="grid gap-2 border-b border-border/80 bg-white py-3"
+              canvasClassName="relative bg-white"
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>What you get</CardTitle>
+            <CardTitle>Quick start</CardTitle>
             <CardDescription>
-              Expandable groups, leaf-only message anchors, and highlight/selection APIs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-foreground text-sm font-semibold">
-                End-user features
-              </p>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Expand/collapse any branch; columns recompute from visible leaves.</li>
-                <li>Grouping rails hide when expanded; messages reroute to leaf actors.</li>
-                <li>Highlight or select actors/messages with your own styling.</li>
-              </ul>
-            </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-xs">
-              <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
-{`controller.highlightMessages(["intent", "confirm"]);
-controller.collapseActor("payments");
-controller.toggleActorExpansion("auth");`}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Library usage</CardTitle>
-            <CardDescription>
-              Install `seqdia` in any React + Tailwind app and render the
-              tree-based diagram. The Next.js app here is only the demo shell.
+              Install and render a diagram in minutes.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p className="text-foreground text-sm font-semibold">
-                Install
-              </p>
-              <pre className="rounded-md bg-slate-900 px-3 py-2 text-xs text-slate-100">
-{`pnpm add seqdia react react-dom
-pnpm add clsx tailwind-merge class-variance-authority @radix-ui/react-slot`}
-              </pre>
-              <p className="text-foreground text-sm font-semibold">
-                Import and render
-              </p>
-              <p>
-                Use `defineLeafDiagram` to ensure messages only target leaf
-                actors. Grouping nodes vanish as rails when expanded.
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <div>
+                <p className="text-foreground font-semibold mb-1">Install</p>
+                <pre className="rounded-md bg-slate-900 px-3 py-2 text-xs text-slate-100">
+                  pnpm add seqdia
+                </pre>
+              </div>
+              <p className="text-xs">
+                Requires <code className="text-[11px] bg-muted px-1 rounded">react</code> and <code className="text-[11px] bg-muted px-1 rounded">react-dom</code> as peer dependencies.
+                Tailwind CSS is expected for styling.
               </p>
             </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-xs">
-              <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
-{`import { SequenceDiagram, useSequenceController, defineLeafDiagram } from "seqdia";
-
-const model = defineLeafDiagram({
-  actors: [{ actorId: "a", label: "Service A" }, { actorId: "b", label: "Service B" }],
-  messages: [{ messageId: "m1", fromActorId: "a", toActorId: "b", label: "Call" }],
-});
-
-export function Simple() {
-  const controller = useSequenceController(model);
-  return <SequenceDiagram model={model} controller={controller} />;
-}`}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Compose your own layout</CardTitle>
-            <CardDescription>
-              Using the exposed layers and layout hook; swap in your own shells/styles.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="rounded-lg border bg-muted/40 p-4 text-xs">
-            <pre className="whitespace-pre-wrap font-mono text-[11px] leading-6 text-muted-foreground">
-{`import {
-  HeaderGrid,
-  RegionsLayer,
-  RailsLayer,
-  MessagesLayer,
-  useSequenceLayout,
+            <div className="rounded-lg border bg-muted/40 p-3 overflow-x-auto">
+              <CodeBlock code={`import {
+  SequenceDiagram,
   useSequenceController,
   defineLeafDiagram,
 } from "seqdia";
 
-const model = defineLeafDiagram({ /* actors/messages */ });
-const controller = useSequenceController(model);
-const { layout, actorColors, actorBackgrounds, resolvedMessages, activeActors } =
-  useSequenceLayout(model, controller);
+const model = defineLeafDiagram({
+  actors: [
+    { actorId: "a", label: "Service A" },
+    { actorId: "b", label: "Service B" },
+  ],
+  messages: [
+    { messageId: "m1", fromActorId: "a",
+      toActorId: "b", label: "Request" },
+  ],
+});
 
-return (
-  <div style={{ minWidth: layout.leafCount * 140 }}>
-    <HeaderGrid
-      layout={{ ...layout, gridTemplate: "repeat(leafCount, 140px)" }}
-      actorColors={actorColors}
-      actorBackgrounds={actorBackgrounds}
+function Diagram() {
+  const controller = useSequenceController(model);
+  return (
+    <SequenceDiagram
+      model={model}
+      controller={controller}
     />
-    <div className="relative" style={{ height: layout.messageAreaHeight }}>
-      <RegionsLayer layout={layout} actorColors={actorColors} actorBackgrounds={actorBackgrounds} />
-      <RailsLayer layout={layout} actorColors={actorColors} activeActors={activeActors} />
-      <MessagesLayer resolvedMessages={resolvedMessages} />
+  );
+}`} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Controller API</CardTitle>
+            <CardDescription>
+              The controller manages diagram state. Create one with <code className="bg-muted px-1 rounded text-xs">useSequenceController(model)</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Expansion</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li><code className="bg-muted px-1 rounded">expandActor(id)</code></li>
+                  <li><code className="bg-muted px-1 rounded">collapseActor(id)</code></li>
+                  <li><code className="bg-muted px-1 rounded">toggleActorExpansion(id)</code></li>
+                  <li><code className="bg-muted px-1 rounded">setExpandedActors(Set)</code></li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Highlighting</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li><code className="bg-muted px-1 rounded">highlightActors(ids)</code></li>
+                  <li><code className="bg-muted px-1 rounded">highlightMessages(ids)</code></li>
+                  <li><code className="bg-muted px-1 rounded">clearHighlights()</code></li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground/70">Transient emphasis, typically on hover</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Selection</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li><code className="bg-muted px-1 rounded">selectActors(ids)</code></li>
+                  <li><code className="bg-muted px-1 rounded">selectMessages(ids)</code></li>
+                  <li><code className="bg-muted px-1 rounded">toggleActorSelection(id)</code></li>
+                  <li><code className="bg-muted px-1 rounded">toggleMessageSelection(id)</code></li>
+                  <li><code className="bg-muted px-1 rounded">clearSelection()</code></li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground/70">Persistent state, typically on click</p>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-3 overflow-x-auto">
+              <CodeBlock code={`const controller = useSequenceController(model);
+
+// Expand/collapse groups
+controller.expandActor("auth");
+controller.collapseActor("payments");
+controller.toggleActorExpansion("auth");
+
+// Highlight actors or messages (visual emphasis)
+controller.highlightActors(["auth", "payments"]);
+controller.highlightMessages(["auth-session", "intent"]);
+controller.clearHighlights();
+
+// Select actors or messages (persistent state)
+controller.selectMessages(["confirm"]);
+controller.toggleActorSelection("database");
+controller.clearSelection();
+
+// Access current state
+const { highlight, selection, expandedActors } = controller.state;`} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Custom rendering</CardTitle>
+            <CardDescription>
+              Use render props to fully customize actors and messages.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="rounded-lg border bg-muted/40 p-4 overflow-x-auto">
+            <CodeBlock code={`<SequenceDiagram
+  model={model}
+  controller={controller}
+  getActorStyle={(actor) => ({
+    color: palette[actor.actorId],
+  })}
+  getMessageStyle={(message) => ({
+    strokeColor: palette[message.fromActorId],
+  })}
+  renderActor={({ actor, buttonProps, highlighted }) => (
+    <button {...buttonProps} className={cn("btn", highlighted && "ring-2")}>
+      {actor.label}
+    </button>
+  )}
+  renderMessage={({ resolved, messageProps }) => (
+    <div {...messageProps}>
+      <MessageArrow direction={resolved.direction} stroke="#333" />
+      <span>{resolved.message.label}</span>
     </div>
-  </div>
-);`}
-            </pre>
+  )}
+  onActorClick={(id) => console.log("Actor:", id)}
+  onMessageClick={(id) => console.log("Message:", id)}
+/>`} />
           </CardContent>
         </Card>
       </main>

@@ -148,15 +148,54 @@ function computeVisibleActors(
   return visible;
 }
 
-function filterMessages(
-  messages: SequenceMessage[],
+function buildActorAncestryMap(
+  actors: NormalizedActor[],
   visibleActorMap: Record<string, VisibleActor>,
+  ancestorMap: Map<string, string> = new Map(),
+  visibleAncestor: string | null = null,
+): Map<string, string> {
+  actors.forEach((actor) => {
+    const isVisible = Boolean(visibleActorMap[actor.actorId]);
+    const currentAncestor = isVisible ? actor.actorId : visibleAncestor;
+
+    if (currentAncestor) {
+      ancestorMap.set(actor.actorId, currentAncestor);
+    }
+
+    if (actor.children.length > 0) {
+      buildActorAncestryMap(actor.children, visibleActorMap, ancestorMap, currentAncestor);
+    }
+  });
+  return ancestorMap;
+}
+
+function resolveMessagesToVisibleActors(
+  messages: readonly SequenceMessage[],
+  visibleActorMap: Record<string, VisibleActor>,
+  ancestorMap: Map<string, string>,
 ): SequenceMessage[] {
-  return messages.filter(
-    (message) =>
-      Boolean(visibleActorMap[message.fromActorId]) &&
-      Boolean(visibleActorMap[message.toActorId]),
-  );
+  return messages
+    .map((message) => {
+      const resolvedFrom = ancestorMap.get(message.fromActorId);
+      const resolvedTo = ancestorMap.get(message.toActorId);
+
+      if (!resolvedFrom || !resolvedTo) {
+        return null;
+      }
+
+      // If both endpoints resolve to the same actor, this is an internal
+      // message within a collapsed branch - hide it
+      if (resolvedFrom === resolvedTo) {
+        return null;
+      }
+
+      return {
+        ...message,
+        fromActorId: resolvedFrom,
+        toActorId: resolvedTo,
+      };
+    })
+    .filter((msg): msg is SequenceMessage => msg !== null);
 }
 
 export function computeLayout(
@@ -215,7 +254,8 @@ export function computeLayout(
     {},
   );
 
-  const visibleMessages = filterMessages(model.messages, visibleActorMap);
+  const ancestorMap = buildActorAncestryMap(normalizedActors, visibleActorMap);
+  const visibleMessages = resolveMessagesToVisibleActors(model.messages, visibleActorMap, ancestorMap);
   const annotatedMessages = visibleMessages.map((message, idx) => ({
     message,
     order: idx,

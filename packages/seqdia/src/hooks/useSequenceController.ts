@@ -49,9 +49,9 @@ function ensureArray(value: string | string[]) {
   return Array.isArray(value) ? value : [value];
 }
 
-function deriveDefaultExpandedActors(actors: ActorNode[]): Set<string> {
+function deriveDefaultExpandedActors(actors: readonly ActorNode[]): Set<string> {
   const expanded = new Set<string>();
-  const walk = (nodes: ActorNode[]) => {
+  const walk = (nodes: readonly ActorNode[]) => {
     nodes.forEach((node) => {
       const hasChildren = node.children && node.children.length > 0;
       if (hasChildren && (node.defaultExpanded ?? true)) {
