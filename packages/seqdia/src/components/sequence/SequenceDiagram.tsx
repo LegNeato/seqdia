@@ -113,8 +113,8 @@ export function SequenceSurfaceRoot({
 }: SequenceSurfaceRootProps) {
   return (
     <div className={cn("overflow-hidden", className)}>
-      <div style={{ width: "100%", overflowX: "auto" }}>
-        <div style={{ minWidth }}>{children}</div>
+      <div style={{ width: "100%", overflowX: "auto", display: "flex", justifyContent: "center" }}>
+        <div style={{ minWidth, width: minWidth }}>{children}</div>
       </div>
     </div>
   );
