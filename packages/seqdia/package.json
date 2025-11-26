@@ -2,6 +2,7 @@
   "name": "seqdia",
   "version": "0.1.0",
   "description": "React components for interactive sequence diagrams with hierarchical actor grouping",
+  "author": "Don Legnitto",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -13,12 +14,17 @@
   },
   "files": [
     "src",
-    "README.md"
+    "!src/**/__tests__",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "pnpm test"
   },
   "keywords": [
     "react",
@@ -26,12 +32,18 @@
     "diagram",
     "visualization",
     "typescript",
-    "tailwind"
+    "tailwind",
+    "uml",
+    "flowchart"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/legnitto/seqdia#readme",
+  "bugs": {
+    "url": "https://github.com/legnitto/seqdia/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/legnitto/seqdia"
+    "url": "git+https://github.com/legnitto/seqdia.git"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
