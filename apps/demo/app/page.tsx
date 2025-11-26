@@ -356,9 +356,9 @@ export default function Home() {
               getMessageStyle={getMessageStyle}
               renderActor={renderActorButton}
               renderMessage={renderMessageBubble}
-              className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm p-4"
-              headerClassName="grid gap-2 border-b border-border/80 bg-white py-3 px-2"
-              canvasClassName="relative bg-white py-4"
+              className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-sm"
+              headerClassName="grid gap-2 border-b border-border/80 bg-white py-3"
+              canvasClassName="relative bg-white"
             />
           </CardContent>
         </Card>
