@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { SequenceProvider, useSequenceContext } from "./SequenceProvider";
 import type {
@@ -425,13 +424,6 @@ function DefaultActorButton({
         backgroundColor: background ?? inlineStyle?.backgroundColor,
       }}
     >
-      {actor.hasChildren && (
-        actor.expanded ? (
-          <ChevronDown style={{ width: 16, height: 16, color: "#6b7280" }} />
-        ) : (
-          <ChevronRight style={{ width: 16, height: 16, color: "#6b7280" }} />
-        )
-      )}
       {label}
     </button>
   );
@@ -561,8 +553,8 @@ export function MessagesLayer({
         const selected = messageState.selected;
         const messageProps = {
           ...messageState.props,
-          "data-highlighted": strokeHighlighted ? "true" : undefined,
-          "data-selected": selected ? "true" : undefined,
+          "data-highlighted": (strokeHighlighted ? "true" : undefined) as "true" | undefined,
+          "data-selected": (selected ? "true" : undefined) as "true" | undefined,
           className: messageState.props.className,
           style: {
             ...(messageState.props.style ?? {}),
