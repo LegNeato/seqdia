@@ -1,125 +1,177 @@
-# SeqDia
+# SeqDia — Sequence Diagrams for React
 
-Tree-first sequence diagrams for React + Tailwind. Actor labels live in a tree, spans derive from visible leaves, and the diagram renders with layered React components. The Next.js app in this repo is just the demo shell; the components/hooks work in any React project.
+Interactive, collapsible sequence diagrams with hierarchical actor grouping.
 
-## Highlights
+**[Live Demo](https://legneato.github.io/seqdia/)**
 
-- Tree labels with arbitrary depth; header rows per depth and spans from visible leaves.
-- Regions for expanded nodes; single anchor lines for collapsed nodes and leaves using plain `<div>` rails.
-- Messages hide when endpoints (or their ancestors) are collapsed; anchors recompute on every expand/collapse.
-- Hook-first control surface (`useSequenceController`, `useSequenceApi`) for highlight, selection, and expansion.
-- Render props for actor labels and message labels to plug in your own UI.
-- Tested with Vitest + Testing Library.
+## Features
 
-## Quick start
-
-```bash
-pnpm install
-pnpm dev       # runs demo app at http://localhost:3000
-```
+- **Hierarchical actors** — Group actors into collapsible nodes; columns recompute from visible leaves
+- **Customizable rendering** — Use render props to fully customize actors, messages, and layers
+- **Selection & highlighting** — Built-in APIs for programmatic and interactive highlighting
+- **Type-safe models** — `defineLeafDiagram` validates message endpoints at compile time
 
 ## Install
 
 ```bash
-pnpm add seqdia react react-dom
-# demo (Next.js) shell, if you want it
-pnpm add next
+pnpm add seqdia
 ```
 
-Bring your own UI shell/styles. Tailwind (or equivalent CSS) is needed so the utility classes in the components resolve; the demo uses local shadcn-style wrappers.
+Requires `react` and `react-dom` (^18 or ^19) as peer dependencies. Tailwind CSS is expected for styling.
 
-## Usage
-
-Define your data and drive the diagram with the controller:
+## Quick Start
 
 ```tsx
-import { SequenceDiagram, useSequenceController, defineLeafDiagram, type SequenceDiagramModel } from "seqdia";
+import {
+  SequenceDiagram,
+  useSequenceController,
+  defineLeafDiagram,
+} from "seqdia";
 
-const model: SequenceDiagramModel = defineLeafDiagram({
-  title: "Checkout orchestration",
+const model = defineLeafDiagram({
   actors: [
+    { actorId: "client", label: "Client" },
+    { actorId: "server", label: "Server" },
+  ],
+  messages: [
+    { messageId: "req", fromActorId: "client", toActorId: "server", label: "Request" },
+    { messageId: "res", fromActorId: "server", toActorId: "client", label: "Response" },
+  ],
+});
+
+function Diagram() {
+  const controller = useSequenceController(model);
+  return <SequenceDiagram model={model} controller={controller} />;
+}
+```
+
+## Hierarchical Actors
+
+Actors can contain children. When a parent is collapsed, messages route to the parent; when expanded, they route to leaf children.
+
+```tsx
+const model = defineLeafDiagram({
+  actors: [
+    { actorId: "client", label: "Client" },
     {
-      actorId: "checkout",
-      label: "Checkout",
-      defaultExpanded: true,
+      actorId: "backend",
+      label: "Backend",
+      defaultExpanded: false,
       children: [
-        { actorId: "browser", label: "Browser" },
-        { actorId: "frontend", label: "Frontend" },
-        {
-          actorId: "services",
-          label: "Services",
-          children: [
-            { actorId: "auth", label: "Auth" },
-            { actorId: "payments", label: "Payments" },
-          ],
-        },
+        { actorId: "api", label: "API" },
+        { actorId: "db", label: "Database" },
       ],
     },
   ],
   messages: [
-    { messageId: "m1", fromActorId: "browser", toActorId: "frontend", label: "Start" },
-    { messageId: "m2", fromActorId: "frontend", toActorId: "auth", label: "Authenticate" },
-    { messageId: "m3", fromActorId: "frontend", toActorId: "payments", label: "Create intent" },
+    { messageId: "m1", fromActorId: "client", toActorId: "api", label: "Call API" },
+    { messageId: "m2", fromActorId: "api", toActorId: "db", label: "Query" },
   ],
 });
-
-export function CheckoutDiagram() {
-  const controller = useSequenceController(model);
-
-  return (
-    <>
-      <button onClick={() => controller.api.highlightMessages(["m2", "m3"])}>
-        Highlight backend calls
-      </button>
-      <SequenceDiagram model={model} controller={controller} />
-    </>
-  );
-}
 ```
 
-### Controller API (selected)
+## Controller API
 
-- `highlightActors(id | id[])`, `highlightMessages(id | id[])`, `clearHighlights()`
-- `selectActors(id | id[])`, `selectMessages(id | id[])`, `clearSelection()`
-- `toggleActorExpansion(id)`, `expandActor(id)`, `collapseActor(id)`, `setExpandedActors(set)`
+The controller manages expansion state, highlighting, and selection:
 
-For components nested under `SequenceDiagram`, use `useSequenceApi(onReady?)` to grab the same API without manually passing the controller.
+```tsx
+const controller = useSequenceController(model);
 
-### Types and helpers
+// Expansion
+controller.expandActor("backend");
+controller.collapseActor("backend");
+controller.toggleActorExpansion("backend");
 
-- `defineLeafDiagram` enforces that messages target leaf actors only (grouping actors are view-only).
-- `LinearMessages`/`defineLinearDiagram` enforce a continuous message chain if you want that invariant.
-- `VisibleMessage` + `deriveVisibleMessages` (see `src/lib/sequence/visible.ts`) help map your canonical leaf messages to the currently visible rolled-up view.
+// Highlighting (visual emphasis, typically on hover)
+controller.highlightActors(["api", "db"]);
+controller.highlightMessages(["m1", "m2"]);
+controller.clearHighlights();
 
-See `src/lib/sequence/types.ts` for `ActorNode`, `SequenceMessage`, and `SequenceDiagramModel` definitions. Messages carry arbitrary payload metadata.
+// Selection (persistent state, typically on click)
+controller.selectActors("client");
+controller.selectMessages(["m1"]);
+controller.clearSelection();
+```
 
-## Using without Next.js
+## Custom Rendering
 
-The library is plain React. In a non-Next app:
+Override the default rendering with `renderActor` and `renderMessage`:
 
-1) Install `seqdia` and peer deps (`react`, `react-dom`, Tailwind helpers).
-2) Import from `"seqdia"` and supply your own layout shell/styles.
-3) Use the granular exports to compose your own diagram surface.
+```tsx
+<SequenceDiagram
+  model={model}
+  controller={controller}
+  renderActor={({ actor, buttonProps, highlighted, selected }) => (
+    <button
+      {...buttonProps}
+      className={cn(
+        "rounded border px-3 py-2 text-sm font-medium",
+        highlighted && "ring-2 ring-blue-500",
+        selected && "bg-blue-50",
+      )}
+    >
+      {actor.label}
+    </button>
+  )}
+  renderMessage={({ resolved, messageProps, highlighted }) => (
+    <div {...messageProps} className="flex items-center gap-2">
+      <span>{resolved.message.label}</span>
+    </div>
+  )}
+/>
+```
 
-## Monorepo layout
+## Styling
 
-- `packages/seqdia`: publishable React/Tailwind library (components, hooks, types, layout utilities).  
-- `apps/demo`: Next.js demo/docs shell consuming the library via workspace dependency with its own UI components.
+Use `getActorStyle` and `getMessageStyle` to provide colors per actor/message:
+
+```tsx
+<SequenceDiagram
+  model={model}
+  controller={controller}
+  getActorStyle={(actor) => ({
+    color: actor.actorId === "client" ? "#3b82f6" : "#10b981",
+  })}
+  getMessageStyle={(message) => ({
+    strokeColor: "#6366f1",
+  })}
+/>
+```
+
+## Event Callbacks
+
+```tsx
+<SequenceDiagram
+  model={model}
+  controller={controller}
+  onActorClick={(actorId) => console.log("Clicked:", actorId)}
+  onMessageClick={(messageId) => console.log("Clicked:", messageId)}
+  onSelectionChange={(selection) => console.log("Selection:", selection)}
+  onHighlightChange={(highlight) => console.log("Highlight:", highlight)}
+/>
+```
+
+## Monorepo Layout
+
+- `packages/seqdia`: Publishable React library (components, hooks, types)
+- `apps/demo`: Next.js demo app
+
+## Running the Demo Locally
+
+```bash
+git clone https://github.com/LegNeato/seqdia.git
+cd seqdia
+pnpm install
+pnpm dev       # runs demo app at http://localhost:3000
+```
 
 ## Testing
 
 ```bash
-pnpm test        # vitest run
-pnpm lint        # eslint
+pnpm test      # vitest
+pnpm lint      # eslint
 ```
 
 ## License
 
-Dual-licensed under MIT and Apache-2.0. Choose the license that fits your project:
-
-- `LICENSE-MIT`
-- `LICENSE-APACHE`
-
-## Contributing
-
-Issues and PRs are welcome. Keep changes covered with tests and update docs alongside new behaviors.
+MIT
