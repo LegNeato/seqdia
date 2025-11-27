@@ -48,3 +48,17 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm tsc --noEmit
+
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm --filter seqdia publish --dry-run --no-git-checks
