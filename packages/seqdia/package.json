@@ -1,6 +1,6 @@
 {
   "name": "seqdia",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Interactive sequence diagrams for React with hierarchical actors",
   "author": "Christian Legnitto",
   "type": "module",
