@@ -5,3 +5,20 @@ out
 dist
 .env*
 *.log
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.tgz
+coverage
+
+# Claude Code
+.claude
