@@ -37,13 +37,13 @@
     "flowchart"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/legnitto/seqdia#readme",
+  "homepage": "https://github.com/LegNeato/seqdia#readme",
   "bugs": {
-    "url": "https://github.com/legnitto/seqdia/issues"
+    "url": "https://github.com/LegNeato/seqdia/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/legnitto/seqdia.git"
+    "url": "git+https://github.com/LegNeato/seqdia.git"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
