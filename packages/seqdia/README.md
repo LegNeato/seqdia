@@ -1,5 +1,7 @@
 # SeqDia — Sequence Diagrams for React
 
+[![npm version](https://img.shields.io/npm/v/seqdia.svg)](https://www.npmjs.com/package/seqdia)
+
 Interactive, collapsible sequence diagrams with hierarchical actor grouping.
 
 **[Live Demo](https://legneato.github.io/seqdia/)** · [GitHub](https://github.com/LegNeato/seqdia)
