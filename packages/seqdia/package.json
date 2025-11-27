@@ -1,6 +1,6 @@
 {
   "name": "seqdia",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React components for interactive sequence diagrams with hierarchical actor grouping",
   "author": "Christian Legnitto",
   "type": "module",
