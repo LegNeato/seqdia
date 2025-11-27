@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.3...seqdia-v0.3.4) (2025-11-27)
+
+
+### Bug Fixes
+
+* update package description ([3aa784d](https://github.com/LegNeato/seqdia/commit/3aa784d9e1b26c9a8922b8900c0c0d5e240e2a75))
+
 ## [0.3.3](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.2...seqdia-v0.3.3) (2025-11-27)
 
 
