@@ -1,8 +1,8 @@
-# SeqDia
+# SeqDia — Sequence Diagrams for React
 
-React components for interactive sequence diagrams with hierarchical actor grouping.
+Interactive, collapsible sequence diagrams with hierarchical actor grouping.
 
-**[Live Demo](https://legneato.github.io/seqdia/)**
+**[Live Demo](https://legneato.github.io/seqdia/)** · [GitHub](https://github.com/LegNeato/seqdia)
 
 ## Features
 
