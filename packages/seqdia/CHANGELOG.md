@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.0...seqdia-v0.3.1) (2025-11-27)
+
+
+### Bug Fixes
+
+* add license file links in README ([395f91c](https://github.com/LegNeato/seqdia/commit/395f91cfe243696549eb200236648e8aa9d9393b))
+
 ## [0.3.0](https://github.com/LegNeato/seqdia/compare/seqdia-v0.2.0...seqdia-v0.3.0) (2025-11-27)
 
 
