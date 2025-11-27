@@ -41,6 +41,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
+      - run: npm install -g npm@latest
       - run: pnpm install
       - run: pnpm --filter seqdia test
       - run: pnpm --filter seqdia build
