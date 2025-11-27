@@ -2,6 +2,8 @@
 
 React components for interactive sequence diagrams with hierarchical actor grouping.
 
+**[Live Demo](https://legneato.github.io/seqdia/)**
+
 ## Features
 
 - **Hierarchical actors** — Group actors into collapsible nodes; columns recompute from visible leaves
