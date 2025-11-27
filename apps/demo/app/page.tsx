@@ -342,7 +342,7 @@ export default function Home() {
                 </CardDescription>
               </div>
               <div className="flex flex-wrap gap-2 shrink-0">
-                <Button onClick={highlightHappyPath} size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+                <Button onClick={highlightHappyPath} variant="outline" size="sm">
                   Highlight path
                 </Button>
                 <Button onClick={spotlightInfra} variant="outline" size="sm">
@@ -383,7 +383,7 @@ export default function Home() {
               Install and render a diagram in minutes.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+          <CardContent className="grid gap-4 p-6 md:grid-cols-2">
             <div className="space-y-3 text-sm text-muted-foreground">
               <div>
                 <p className="text-foreground font-semibold mb-1">Install</p>
@@ -434,7 +434,7 @@ function Diagram() {
               The controller manages diagram state. Create one with <code className="bg-muted px-1 rounded text-xs">useSequenceController(model)</code>.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-foreground">Expansion</p>
@@ -497,7 +497,8 @@ const { highlight, selection, expandedActors } = controller.state;`} />
               Use render props to fully customize actors and messages.
             </CardDescription>
           </CardHeader>
-          <CardContent className="rounded-lg border bg-muted/40 p-4 overflow-x-auto">
+          <CardContent className="p-6">
+            <div className="rounded-lg border bg-muted/40 p-4 overflow-x-auto">
             <CodeBlock code={`<SequenceDiagram
   model={model}
   controller={controller}
@@ -521,6 +522,7 @@ const { highlight, selection, expandedActors } = controller.state;`} />
   onActorClick={(id) => console.log("Actor:", id)}
   onMessageClick={(id) => console.log("Message:", id)}
 />`} />
+            </div>
           </CardContent>
         </Card>
       </main>
