@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.4...seqdia-v0.3.5) (2025-11-27)
+
+
+### Bug Fixes
+
+* add npm badge to README ([9eae9ce](https://github.com/LegNeato/seqdia/commit/9eae9ce286bb119fedaeb3638bd98f7dea42fb83))
+
 ## [0.3.4](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.3...seqdia-v0.3.4) (2025-11-27)
 
 
