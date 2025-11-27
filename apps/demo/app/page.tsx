@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Github, RefreshCw } from "lucide-react";
 
 import {
   SequenceDiagram,
@@ -221,9 +221,11 @@ function renderActorButton({
       )}
     >
       {actor.hasChildren && (
-        <span className="text-muted-foreground">
-          {actor.expanded ? "▾" : "▸"}
-        </span>
+        actor.expanded ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )
       )}
       <span className="truncate">{label}</span>
     </button>
@@ -305,15 +307,26 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <main className="container flex max-w-5xl flex-col gap-8 py-12">
         <header className="flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold text-primary">SeqDia</p>
-            <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
-              Interactive sequence diagrams for React
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-              Model actors as a tree with collapsible groups. Messages route to visible leaves—expand
-              a group to reveal child actors, collapse to roll messages up to the parent.
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-semibold text-primary">SeqDia</p>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
+                Interactive sequence diagrams for React
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
+                Model actors as a tree with collapsible groups. Messages route to visible leaves—expand
+                a group to reveal child actors, collapse to roll messages up to the parent.
+              </p>
+            </div>
+            <a
+              href="https://github.com/LegNeato/seqdia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50 transition"
+            >
+              <Github className="h-4 w-4" />
+              GitHub
+            </a>
           </div>
         </header>
 
