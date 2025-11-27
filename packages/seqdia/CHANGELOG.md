@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.5...seqdia-v0.3.6) (2025-11-27)
+
+
+### Bug Fixes
+
+* trigger release for npm upgrade ([4291d7c](https://github.com/LegNeato/seqdia/commit/4291d7c0398d4698d1c1509de7d11209d8b95d5d))
+
 ## [0.3.5](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.4...seqdia-v0.3.5) (2025-11-27)
 
 
