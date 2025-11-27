@@ -163,3 +163,4 @@ pnpm dev       # runs demo app at http://localhost:3000
 ## License
 
 Dual-licensed under [MIT](LICENSE-MIT) and [Apache-2.0](LICENSE-APACHE). Choose whichever fits your project.
+
