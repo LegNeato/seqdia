@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.2...seqdia-v0.3.3) (2025-11-27)
+
+
+### Bug Fixes
+
+* trigger npm publish with environment ([a6502f3](https://github.com/LegNeato/seqdia/commit/a6502f3b041e555c41f47f17715d8a8d911b8bff))
+
 ## [0.3.2](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.1...seqdia-v0.3.2) (2025-11-27)
 
 
