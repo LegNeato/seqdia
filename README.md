@@ -174,4 +174,4 @@ pnpm lint      # eslint
 
 ## License
 
-MIT
+Dual-licensed under MIT and Apache-2.0. Choose whichever fits your project.
