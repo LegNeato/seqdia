@@ -17,12 +17,7 @@ Interactive, collapsible sequence diagrams with hierarchical actor grouping.
 pnpm add seqdia
 ```
 
-**Requirements:**
-- `react` and `react-dom` (^18 or ^19)
-- Tailwind CSS (for utility classes)
-- A bundler that handles TypeScript/JSX (Next.js, Vite, etc.)
-
-The package ships TypeScript source files directly for maximum compatibility with modern React frameworks.
+Requires `react` and `react-dom` (^18 or ^19) as peer dependencies. Tailwind CSS is expected for styling.
 
 ## Quick Start
 
@@ -154,6 +149,15 @@ Use `getActorStyle` and `getMessageStyle` to provide colors per actor/message:
   onSelectionChange={(selection) => console.log("Selection:", selection)}
   onHighlightChange={(highlight) => console.log("Highlight:", highlight)}
 />
+```
+
+## Running the Demo Locally
+
+```bash
+git clone https://github.com/LegNeato/seqdia.git
+cd seqdia
+pnpm install
+pnpm dev       # runs demo app at http://localhost:3000
 ```
 
 ## License
