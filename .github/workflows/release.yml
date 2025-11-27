@@ -43,6 +43,5 @@ jobs:
       - run: pnpm install
       - run: pnpm --filter seqdia test
       - run: pnpm --filter seqdia build
-      - run: pnpm --filter seqdia publish --no-git-checks --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public
+        working-directory: packages/seqdia
