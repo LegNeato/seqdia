@@ -1,16 +1,26 @@
 import { useMemo } from "react";
 import { computeLayout, type SequenceLayout, type VisibleActor } from "../lib/sequence/layout";
-import { COLUMN_WIDTH } from "../lib/constants";
 import { type SequenceController } from "./useSequenceController";
 import { type SequenceDiagramModel } from "../lib/sequence/types";
 
+/**
+ * A resolved message with normalized position values.
+ * All position values (anchor, fromAnchor, toAnchor) are in column units (0 to leafCount).
+ * Consumers can convert to pixels (multiply by columnWidth) or percentages (divide by leafCount).
+ */
 export type ResolvedMessage = {
   message: SequenceDiagramModel["messages"][number];
-  y: number;
-  fromResolved: { anchor: number; actorId: string };
-  toResolved: { anchor: number; actorId: string };
-  fromX: number;
-  toX: number;
+  /** Row index (0-based) */
+  rowIndex: number;
+  /** Normalized anchor of the source actor (in column units) */
+  fromAnchor: number;
+  /** Normalized anchor of the target actor (in column units) */
+  toAnchor: number;
+  /** Actor ID of the resolved source */
+  fromActorId: string;
+  /** Actor ID of the resolved target */
+  toActorId: string;
+  /** Direction: 1 for left-to-right, -1 for right-to-left */
   direction: 1 | -1;
 };
 
@@ -48,6 +58,10 @@ export function useSequenceLayout(
     return map;
   }, [layout.visibleActors]);
 
+  /**
+   * Resolves an actor ID to its anchor position (in column units).
+   * For expanded parent actors, resolves to the appropriate leaf child.
+   */
   const resolveEndpoint = useMemo(
     () =>
       (
@@ -62,7 +76,7 @@ export function useSequenceLayout(
               : leafByStart.get(actor.leafStart);
           if (leaf) {
             return {
-              anchor: layout.anchors[leaf.actorId] * COLUMN_WIDTH,
+              anchor: layout.anchors[leaf.actorId],
               actorId: leaf.actorId,
             };
           }
@@ -70,19 +84,18 @@ export function useSequenceLayout(
         const span = layout.spans[actorId];
         const width = span.end - span.start;
         if (width > 1) {
-          const anchor =
-            toward === "right" ? span.end * COLUMN_WIDTH : span.start * COLUMN_WIDTH;
+          const anchor = toward === "right" ? span.end : span.start;
           return { anchor, actorId };
         }
-        return { anchor: layout.anchors[actorId] * COLUMN_WIDTH, actorId };
+        return { anchor: layout.anchors[actorId], actorId };
       },
     [layout.anchors, layout.spans, layout.visibleActorMap, leafByEnd, leafByStart],
   );
 
   const resolvedMessages = useMemo(() => {
     const last = new Map<string, number>();
-    return layout.messages.map(({ message, y }) => {
-      const toAnchor = layout.anchors[message.toActorId] * COLUMN_WIDTH;
+    return layout.messages.map(({ message, rowIndex }) => {
+      const toAnchor = layout.anchors[message.toActorId];
       const directionHint =
         toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;
       const fromResolved = resolveEndpoint(
@@ -94,17 +107,17 @@ export function useSequenceLayout(
         directionHint > 0 ? "left" : "right",
       );
       const previousFrom = last.get(fromResolved.actorId);
-      const fromX = previousFrom ?? fromResolved.anchor;
-      const toX = toResolved.anchor;
-      const direction: 1 | -1 = toX >= fromX ? 1 : -1;
-      last.set(toResolved.actorId, toX);
+      const fromAnchor = previousFrom ?? fromResolved.anchor;
+      const toAnchorResolved = toResolved.anchor;
+      const direction: 1 | -1 = toAnchorResolved >= fromAnchor ? 1 : -1;
+      last.set(toResolved.actorId, toAnchorResolved);
       return {
         message,
-        y,
-        fromResolved,
-        toResolved,
-        fromX,
-        toX,
+        rowIndex,
+        fromAnchor,
+        toAnchor: toAnchorResolved,
+        fromActorId: fromResolved.actorId,
+        toActorId: toResolved.actorId,
         direction,
       };
     });
@@ -113,8 +126,8 @@ export function useSequenceLayout(
   const activeActors = useMemo(() => {
     const set = new Set<string>();
     resolvedMessages.forEach((entry) => {
-      set.add(entry.fromResolved.actorId);
-      set.add(entry.toResolved.actorId);
+      set.add(entry.fromActorId);
+      set.add(entry.toActorId);
     });
     return set;
   }, [resolvedMessages]);

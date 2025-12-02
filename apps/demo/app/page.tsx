@@ -263,7 +263,7 @@ function renderMessageBubble({
         >
           <span className="max-w-[260px] truncate">{label}</span>
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            {resolved.fromResolved.actorId} → {resolved.toResolved.actorId}
+            {resolved.fromActorId} → {resolved.toActorId}
           </span>
         </MessageLabel>
       </div>

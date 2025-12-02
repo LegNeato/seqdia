@@ -431,11 +431,13 @@ function DefaultActorButton({
 
 export type RegionsProps = {
   layout: SequenceLayout;
+  columnWidth?: number;
   getActorStyle?: SequenceSurfaceProps["getActorStyle"];
 };
 
 export function RegionsLayer({
   layout,
+  columnWidth = COLUMN_WIDTH,
   getActorStyle,
 }: RegionsProps) {
   const regionNodes = [...layout.visibleActors]
@@ -446,8 +448,8 @@ export function RegionsLayer({
     <>
       {regionNodes.map((actor) => {
         const span = layout.spans[actor.actorId];
-        const xStart = span.start * COLUMN_WIDTH;
-        const xEnd = span.end * COLUMN_WIDTH;
+        const xStart = span.start * columnWidth;
+        const xEnd = span.end * columnWidth;
         const style = getActorStyle?.(actor);
         const color = style?.color ?? "hsl(215 16% 70%)";
         const baseFill = style?.backgroundColor ?? softColor(color, 99.4);
@@ -477,10 +479,11 @@ export function RegionsLayer({
 export type RailsProps = {
   layout: SequenceLayout;
   activeActors: Set<string>;
+  columnWidth?: number;
   getActorStyle?: SequenceSurfaceProps["getActorStyle"];
 };
 
-export function RailsLayer({ layout, activeActors, getActorStyle }: RailsProps) {
+export function RailsLayer({ layout, activeActors, columnWidth = COLUMN_WIDTH, getActorStyle }: RailsProps) {
   const { controller } = useSequenceContext();
   const { highlight, selection } = controller.state;
   const leafNodes = layout.visibleActors.filter((actor) => actor.isLeaf);
@@ -488,7 +491,7 @@ export function RailsLayer({ layout, activeActors, getActorStyle }: RailsProps) 
   return (
     <>
       {leafNodes.map((actor) => {
-        const x = layout.anchors[actor.actorId] * COLUMN_WIDTH;
+        const x = layout.anchors[actor.actorId] * columnWidth;
         const highlighted = highlight.actors.has(actor.actorId);
         const selected = selection.actors.has(actor.actorId);
         const style = getActorStyle?.(actor);
@@ -518,6 +521,8 @@ export function RailsLayer({ layout, activeActors, getActorStyle }: RailsProps) 
 
 export type MessagesProps = {
   resolvedMessages: ResolvedMessage[];
+  columnWidth?: number;
+  rowHeight?: number;
   renderMessageLabel?: (message: SequenceMessage) => React.ReactNode;
   renderMessage?: (props: MessageRenderProps) => React.ReactNode;
   getMessageStyle?: SequenceSurfaceProps["getMessageStyle"];
@@ -526,6 +531,8 @@ export type MessagesProps = {
 
 export function MessagesLayer({
   resolvedMessages,
+  columnWidth = COLUMN_WIDTH,
+  rowHeight = 60,
   renderMessageLabel,
   renderMessage,
   getMessageStyle,
@@ -537,10 +544,14 @@ export function MessagesLayer({
   return (
     <>
       {resolvedMessages.map((resolved) => {
-        const { message, y, fromResolved, toResolved, fromX, toX, direction } =
+        const { message, rowIndex, fromAnchor, toAnchor, fromActorId, toActorId, direction } =
           resolved;
+        // Convert normalized anchors to pixel positions
+        const fromX = fromAnchor * columnWidth;
+        const toX = toAnchor * columnWidth;
+        const y = rowIndex * rowHeight + 30; // 30px padding from top
         const left = Math.min(fromX, toX);
-        const width = Math.max(Math.abs(toX - fromX), COLUMN_WIDTH * 0.35);
+        const width = Math.max(Math.abs(toX - fromX), columnWidth * 0.35);
         const style = getMessageStyle?.(message);
         const stroke = style?.strokeColor ?? "#111827";
         const messageState = interactions.getMessageInteractions<HTMLDivElement>(
@@ -548,8 +559,8 @@ export function MessagesLayer({
         );
         const strokeHighlighted =
           messageState.highlighted ||
-          highlight.actors.has(fromResolved.actorId) ||
-          highlight.actors.has(toResolved.actorId);
+          highlight.actors.has(fromActorId) ||
+          highlight.actors.has(toActorId);
         const selected = messageState.selected;
         const messageProps = {
           ...messageState.props,
@@ -782,6 +793,8 @@ function DiagramCanvas({
   ) : (
     <MessagesLayer
       resolvedMessages={resolvedMessages}
+      columnWidth={COLUMN_WIDTH}
+      rowHeight={60}
       renderMessageLabel={renderMessageLabel}
       renderMessage={renderMessage}
       getMessageStyle={getMessageStyle}
