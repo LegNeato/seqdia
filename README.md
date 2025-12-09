@@ -9,7 +9,7 @@ Interactive, collapsible sequence diagrams with hierarchical actor grouping.
 - **Hierarchical actors** — Group actors into collapsible nodes; columns recompute from visible leaves
 - **Customizable rendering** — Use render props to fully customize actors, messages, and layers
 - **Selection & highlighting** — Built-in APIs for programmatic and interactive highlighting
-- **Type-safe models** — `defineLeafDiagram` validates message endpoints at compile time
+- **Type-safe models** — `defineLeafDiagram` and `defineLinearDiagram` validate messages at compile time
 
 ## Install
 
@@ -70,6 +70,36 @@ const model = defineLeafDiagram({
 });
 ```
 
+## Type-Safe Model Builders
+
+Two builder functions provide compile-time validation:
+
+```tsx
+import { defineLeafDiagram, defineLinearDiagram } from "seqdia";
+
+// defineLeafDiagram: Validates that message endpoints reference valid actor IDs
+const model1 = defineLeafDiagram({
+  actors: [{ actorId: "a", label: "A" }, { actorId: "b", label: "B" }],
+  messages: [
+    { messageId: "m1", fromActorId: "a", toActorId: "b", label: "Hello" },
+    // { messageId: "m2", fromActorId: "a", toActorId: "x", label: "Error" },
+    // ^ TypeScript error: "x" is not a valid actor ID
+  ],
+});
+
+// defineLinearDiagram: Validates that messages form a continuous chain
+// (each message's fromActorId must equal the previous message's toActorId)
+const model2 = defineLinearDiagram({
+  actors: [{ actorId: "a", label: "A" }, { actorId: "b", label: "B" }],
+  messages: [
+    { messageId: "m1", fromActorId: "a", toActorId: "b", label: "Request" },
+    { messageId: "m2", fromActorId: "b", toActorId: "a", label: "Response" },
+    // { messageId: "m3", fromActorId: "b", toActorId: "a", label: "Error" },
+    // ^ TypeScript error: chain broken, previous ended at "a" but this starts at "b"
+  ],
+});
+```
+
 ## Controller API
 
 The controller manages expansion state, highlighting, and selection:
@@ -81,6 +111,7 @@ const controller = useSequenceController(model);
 controller.expandActor("backend");
 controller.collapseActor("backend");
 controller.toggleActorExpansion("backend");
+controller.setExpandedActors(new Set(["backend", "frontend"]));
 
 // Highlighting (visual emphasis, typically on hover)
 controller.highlightActors(["api", "db"]);
@@ -90,7 +121,14 @@ controller.clearHighlights();
 // Selection (persistent state, typically on click)
 controller.selectActors("client");
 controller.selectMessages(["m1"]);
+controller.toggleActorSelection("client");    // Toggle in/out of selection
+controller.toggleMessageSelection("m1");      // Toggle in/out of selection
 controller.clearSelection();
+
+// Access current state
+controller.state.expandedActors;  // Set<string>
+controller.state.highlight;       // { actors: Set<string>, messages: Set<string> }
+controller.state.selection;       // { actors: Set<string>, messages: Set<string> }
 ```
 
 ## Custom Rendering
@@ -149,6 +187,159 @@ Use `getActorStyle` and `getMessageStyle` to provide colors per actor/message:
   onSelectionChange={(selection) => console.log("Selection:", selection)}
   onHighlightChange={(highlight) => console.log("Highlight:", highlight)}
 />
+```
+
+## Advanced: Hooks
+
+For more control, use the individual hooks:
+
+```tsx
+import {
+  useSequenceLayout,
+  useSequenceInteractions,
+  useSequenceApi,
+  SequenceProvider,
+} from "seqdia";
+
+// Inside a SequenceProvider:
+function CustomDiagram() {
+  // Get layout data with resolved message positions
+  const { layout, resolvedMessages, activeActors } = useSequenceLayout(model, controller);
+
+  // Get interaction helpers (click, hover, selection state)
+  const { getActorInteractions, getMessageInteractions } = useSequenceInteractions({
+    selectActorsOnClick: true,
+    highlightActorsOnHover: true,
+    onSelectionChange: (selection) => console.log(selection),
+  });
+
+  // Access controller from context (when inside SequenceProvider)
+  const controller = useSequenceApi();
+
+  return (
+    <div>
+      {resolvedMessages.map((resolved) => (
+        <div key={resolved.message.messageId}>
+          {resolved.message.label}: {resolved.fromAnchor} → {resolved.toAnchor}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### ResolvedMessage
+
+Messages are resolved with normalized anchor positions:
+
+```tsx
+type ResolvedMessage = {
+  message: SequenceMessage;
+  rowIndex: number;           // Row index (0-based)
+  fromAnchor: number;         // Source position in column units
+  toAnchor: number;           // Target position in column units
+  fromActorId: string;        // Resolved source actor
+  toActorId: string;          // Resolved target actor
+  direction: 1 | -1;          // 1 = left-to-right, -1 = right-to-left
+};
+```
+
+## Advanced: Custom Layouts
+
+For complete control over rendering, use the core layout APIs:
+
+```tsx
+import {
+  computeLayout,
+  anchorToPixels,
+  anchorToPercent,
+  COLUMN_WIDTH,
+} from "seqdia";
+
+// Compute layout from model
+const layout = computeLayout(model, {
+  expandedActorIds: new Set(["backend"]),
+  headerRowHeight: 56,
+  messageRowHeight: 76,
+});
+
+// Convert anchor positions to pixels or percentages
+const fromX = anchorToPixels(resolved.fromAnchor, COLUMN_WIDTH);
+const toX = anchorToPixels(resolved.toAnchor, COLUMN_WIDTH);
+
+// Or use percentages for responsive layouts
+const fromPercent = anchorToPercent(resolved.fromAnchor, layout.leafCount);
+const toPercent = anchorToPercent(resolved.toAnchor, layout.leafCount);
+```
+
+### SequenceLayout
+
+The layout object contains all positioning data:
+
+```tsx
+type SequenceLayout = {
+  headerRows: VisibleActor[][];           // Actors grouped by depth
+  visibleActors: VisibleActor[];          // All visible actors
+  visibleActorMap: Record<string, VisibleActor>;
+  leafCount: number;                      // Number of leaf columns
+  anchors: Record<string, number>;        // Actor ID → anchor position
+  spans: Record<string, { start: number; end: number }>;
+  messages: PositionedMessage[];          // Messages with row positions
+  headerHeight: number;
+  messageAreaHeight: number;
+  totalHeight: number;
+  rowHeight: number;
+  headerRowHeight: number;
+};
+```
+
+## Advanced: Component Parts
+
+Build custom diagrams using individual components:
+
+```tsx
+import {
+  SequenceProvider,
+  SequenceSurface,
+  SequenceSurfaceRoot,
+  SequenceCanvasSection,
+  HeaderGrid,
+  RegionsLayer,
+  RailsLayer,
+  MessagesLayer,
+  MessageArrow,
+  MessageLabel,
+} from "seqdia";
+
+// Use SequenceSurface with a children render prop for full control
+<SequenceSurface
+  model={model}
+  controller={controller}
+>
+  {({ layout, resolvedMessages, activeActors, columnWidth, interactions }) => (
+    <>
+      <HeaderGrid layout={layout} /* ... */ />
+      <RegionsLayer layout={layout} /* ... */ />
+      <RailsLayer layout={layout} activeActors={activeActors} /* ... */ />
+      <MessagesLayer resolvedMessages={resolvedMessages} /* ... */ />
+    </>
+  )}
+</SequenceSurface>
+```
+
+## Utility Functions
+
+```tsx
+import { cn, softColor, collectActorIds } from "seqdia";
+
+// Combine class names (clsx + tailwind-merge)
+cn("px-4", condition && "bg-blue-500");
+
+// Adjust HSL color lightness
+softColor("hsl(210 100% 50%)", 90);  // Lighter blue
+
+// Recursively collect all actor IDs from a tree
+collectActorIds(model.actors);  // ["client", "backend", "api", "db"]
 ```
 
 ## Monorepo Layout
