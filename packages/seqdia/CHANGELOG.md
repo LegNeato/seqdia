@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.6...seqdia-v0.4.0) (2025-12-09)
+
+
+### Features
+
+* add normalized layout helpers and improve exports ([8321ae1](https://github.com/LegNeato/seqdia/commit/8321ae1d884d5cf0599da15d0b1693ce6bc9699a))
+
 ## [0.3.6](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.5...seqdia-v0.3.6) (2025-11-27)
 
 
