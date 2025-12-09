@@ -329,21 +329,6 @@ import {
 </SequenceSurface>
 ```
 
-## Utility Functions
-
-```tsx
-import { cn, softColor, collectActorIds } from "seqdia";
-
-// Combine class names (clsx + tailwind-merge)
-cn("px-4", condition && "bg-blue-500");
-
-// Adjust HSL color lightness
-softColor("hsl(210 100% 50%)", 90);  // Lighter blue
-
-// Recursively collect all actor IDs from a tree
-collectActorIds(model.actors);  // ["client", "backend", "api", "db"]
-```
-
 ## Running the Demo Locally
 
 ```bash
