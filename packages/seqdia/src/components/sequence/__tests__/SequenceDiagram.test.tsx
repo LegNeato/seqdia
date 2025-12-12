@@ -81,7 +81,81 @@ function HarnessWithEvents({
   );
 }
 
+const selfMessageModel: SequenceDiagramModel = defineLinearDiagram({
+  id: "self-message-test",
+  title: "Self-referential messages",
+  actors: [
+    { actorId: "actor-a", label: "Actor A" },
+    { actorId: "actor-b", label: "Actor B" },
+  ],
+  messages: [
+    {
+      messageId: "m1",
+      fromActorId: "actor-a",
+      toActorId: "actor-b",
+      label: "A -> B",
+    },
+    {
+      messageId: "self",
+      fromActorId: "actor-b",
+      toActorId: "actor-b",
+      label: "Self processing",
+    },
+    {
+      messageId: "m2",
+      fromActorId: "actor-b",
+      toActorId: "actor-a",
+      label: "B -> A",
+    },
+  ] as const,
+});
+
+function SelfMessageHarness() {
+  const controller = useSequenceController(selfMessageModel);
+
+  return (
+    <div>
+      <button onClick={() => controller.highlightMessages("self")}>
+        highlight self
+      </button>
+      <button onClick={() => controller.selectMessages(["self"])}>
+        select self
+      </button>
+      <SequenceDiagram model={selfMessageModel} controller={controller} />
+    </div>
+  );
+}
+
 describe("SequenceDiagram", () => {
+  it("renders self-referential messages", () => {
+    render(<SelfMessageHarness />);
+
+    const selfMessage = document.querySelector('[data-message-id="self"]');
+    expect(selfMessage).toBeInTheDocument();
+  });
+
+  it("highlights self-referential messages via API calls", async () => {
+    render(<SelfMessageHarness />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText("highlight self"));
+
+    const selfMessage = document.querySelector('[data-message-id="self"]');
+    expect(selfMessage).toBeInTheDocument();
+    expect(selfMessage?.getAttribute("data-highlighted")).toBe("true");
+  });
+
+  it("selects self-referential messages via API calls", async () => {
+    render(<SelfMessageHarness />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText("select self"));
+
+    const selfMessage = document.querySelector('[data-message-id="self"]');
+    expect(selfMessage).toBeInTheDocument();
+    expect(selfMessage?.getAttribute("data-selected")).toBe("true");
+  });
+
   it("highlights messages via API calls", async () => {
     render(<Harness />);
     const user = userEvent.setup();

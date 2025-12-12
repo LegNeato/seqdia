@@ -549,9 +549,10 @@ export function MessagesLayer({
         // Convert normalized anchors to pixel positions
         const fromX = fromAnchor * columnWidth;
         const toX = toAnchor * columnWidth;
+        const isSelfMessage = direction === 0;
         const y = rowIndex * rowHeight + 30; // 30px padding from top
-        const left = Math.min(fromX, toX);
-        const width = Math.max(Math.abs(toX - fromX), columnWidth * 0.35);
+        const left = isSelfMessage ? fromX : Math.min(fromX, toX);
+        const width = isSelfMessage ? columnWidth * 0.45 : Math.max(Math.abs(toX - fromX), columnWidth * 0.35);
         const style = getMessageStyle?.(message);
         const stroke = style?.strokeColor ?? "#111827";
         const messageState = interactions.getMessageInteractions<HTMLDivElement>(
@@ -630,12 +631,91 @@ export function MessagesLayer({
 }
 
 export type MessageArrowProps = {
-  direction: 1 | -1;
+  direction: 1 | -1 | 0;
   stroke: string;
   className?: string;
 };
 
 export function MessageArrow({ direction, stroke, className }: MessageArrowProps) {
+  // Self-referential message: compact loop arrow that goes right and back
+  if (direction === 0) {
+    const loopHeight = 24;
+    return (
+      <div
+        className={className}
+        style={{
+          position: "relative",
+          height: loopHeight,
+          width: "100%",
+        }}
+      >
+        {/* Starting dot */}
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            display: "inline-block",
+            height: 6,
+            width: 6,
+            borderRadius: 9999,
+            backgroundColor: stroke,
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+        {/* Top horizontal line */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            right: 6,
+            height: 2,
+            backgroundColor: stroke,
+            transform: "translateY(-50%)",
+          }}
+        />
+        {/* Right vertical line */}
+        <div
+          style={{
+            position: "absolute",
+            right: 6,
+            top: 0,
+            width: 2,
+            height: loopHeight,
+            backgroundColor: stroke,
+          }}
+        />
+        {/* Bottom horizontal line */}
+        <div
+          style={{
+            position: "absolute",
+            left: 8,
+            bottom: 0,
+            right: 6,
+            height: 2,
+            backgroundColor: stroke,
+            transform: "translateY(50%)",
+          }}
+        />
+        {/* Arrow pointing left at bottom */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            width: 0,
+            height: 0,
+            borderTop: "5px solid transparent",
+            borderBottom: "5px solid transparent",
+            borderRight: `8px solid ${stroke}`,
+            transform: "translateY(50%)",
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className={className}

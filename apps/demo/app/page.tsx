@@ -115,60 +115,67 @@ const checkoutModel: SequenceDiagramModel = defineLeafDiagram({
       rowIndex: 6,
     },
     {
+      messageId: "validate-cart",
+      fromActorId: "orchestrator",
+      toActorId: "orchestrator",
+      label: "Validate cart",
+      rowIndex: 7,
+    },
+    {
       messageId: "persist-intent",
       fromActorId: "orchestrator",
       toActorId: "database",
       label: "Persist intent",
-      rowIndex: 7,
+      rowIndex: 8,
     },
     {
       messageId: "intent-stored",
       fromActorId: "database",
       toActorId: "orchestrator",
       label: "Intent stored",
-      rowIndex: 8,
+      rowIndex: 9,
     },
     {
       messageId: "stripe-call",
       fromActorId: "orchestrator",
       toActorId: "stripe",
       label: "Call Stripe",
-      rowIndex: 9,
+      rowIndex: 10,
     },
     {
       messageId: "fraud-check",
       fromActorId: "stripe",
       toActorId: "fraud",
       label: "Check risk",
-      rowIndex: 10,
+      rowIndex: 11,
     },
     {
       messageId: "fraud-return",
       fromActorId: "fraud",
       toActorId: "stripe",
       label: "Risk ok",
-      rowIndex: 11,
+      rowIndex: 12,
     },
     {
       messageId: "stripe-ok",
       fromActorId: "stripe",
       toActorId: "orchestrator",
       label: "Payment ok",
-      rowIndex: 12,
+      rowIndex: 13,
     },
     {
       messageId: "confirm",
       fromActorId: "orchestrator",
       toActorId: "frontend",
       label: "Confirm",
-      rowIndex: 13,
+      rowIndex: 14,
     },
     {
       messageId: "render",
       fromActorId: "frontend",
       toActorId: "browser",
       label: "Render receipt",
-      rowIndex: 14,
+      rowIndex: 15,
     },
   ] as const,
 } as const);
@@ -241,6 +248,8 @@ function renderMessageBubble({
   style,
 }: MessageRenderProps) {
   const stroke = style?.strokeColor ?? "#111827";
+  const isSelfMessage = resolved.direction === 0;
+
   return (
     <div
       {...messageProps}
@@ -250,7 +259,22 @@ function renderMessageBubble({
         cursor: "pointer",
       }}
     >
-      <MessageArrow direction={resolved.direction} stroke={stroke} />
+      {isSelfMessage ? (
+        // Self-message: dot on the actor line, same position as regular message dots
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              display: "inline-block",
+              height: 7,
+              width: 7,
+              borderRadius: 9999,
+              backgroundColor: stroke,
+            }}
+          />
+        </div>
+      ) : (
+        <MessageArrow direction={resolved.direction} stroke={stroke} />
+      )}
       <div className="pointer-events-none mt-1 flex w-full justify-center">
         <MessageLabel
           highlighted={highlighted}
@@ -263,7 +287,7 @@ function renderMessageBubble({
         >
           <span className="max-w-[260px] truncate">{label}</span>
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            {resolved.fromActorId} → {resolved.toActorId}
+            {isSelfMessage ? resolved.fromActorId : `${resolved.fromActorId} → ${resolved.toActorId}`}
           </span>
         </MessageLabel>
       </div>

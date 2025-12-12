@@ -20,8 +20,8 @@ export type ResolvedMessage = {
   fromActorId: string;
   /** Actor ID of the resolved target */
   toActorId: string;
-  /** Direction: 1 for left-to-right, -1 for right-to-left */
-  direction: 1 | -1;
+  /** Direction: 1 for left-to-right, -1 for right-to-left, 0 for self-referential */
+  direction: 1 | -1 | 0;
 };
 
 export type LayoutData = {
@@ -95,6 +95,23 @@ export function useSequenceLayout(
   const resolvedMessages = useMemo(() => {
     const last = new Map<string, number>();
     return layout.messages.map(({ message, rowIndex }) => {
+      // Check for self-referential message
+      const isSelfMessage = message.fromActorId === message.toActorId;
+
+      if (isSelfMessage) {
+        const selfAnchor = layout.anchors[message.fromActorId];
+        last.set(message.fromActorId, selfAnchor);
+        return {
+          message,
+          rowIndex,
+          fromAnchor: selfAnchor,
+          toAnchor: selfAnchor,
+          fromActorId: message.fromActorId,
+          toActorId: message.toActorId,
+          direction: 0 as const,
+        };
+      }
+
       const toAnchor = layout.anchors[message.toActorId];
       const directionHint =
         toAnchor >= (layout.anchors[message.fromActorId] ?? 0) ? 1 : -1;

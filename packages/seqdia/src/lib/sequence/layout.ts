@@ -183,10 +183,15 @@ function resolveMessagesToVisibleActors(
         return null;
       }
 
-      // If both endpoints resolve to the same actor, this is an internal
-      // message within a collapsed branch - hide it
+      // If both endpoints resolve to the same actor, check if this is an
+      // intentional self-message or an internal message within a collapsed branch
       if (resolvedFrom === resolvedTo) {
-        return null;
+        // Intentional self-messages: original from and to are the same actor
+        const isIntentionalSelfMessage = message.fromActorId === message.toActorId;
+        if (!isIntentionalSelfMessage) {
+          // Internal message within collapsed branch - hide it
+          return null;
+        }
       }
 
       return {
