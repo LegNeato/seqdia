@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/LegNeato/seqdia/compare/seqdia-v0.4.0...seqdia-v0.5.0) (2025-12-12)
+
+
+### Features
+
+* add support for self-referential messages ([911d461](https://github.com/LegNeato/seqdia/commit/911d46144fe32d726bf2fef461c49e8c6becbe8e))
+
 ## [0.4.0](https://github.com/LegNeato/seqdia/compare/seqdia-v0.3.6...seqdia-v0.4.0) (2025-12-09)
 
 
